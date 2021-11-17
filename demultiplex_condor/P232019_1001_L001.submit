@@ -1,0 +1,25 @@
+# Import environment variables
+getenv       = true
+
+# Full path to the program, without any arguments
+executable   = /data/bin/cellranger-atac
+
+# Arguments (see below for syntax)
+arguments    = "count --id bcdCT_MB21_02_$(barcode) --reference /data/ref/cellranger-atac/refdata-cellranger-atac-mm10-2020-A-2.0.0/ --fastqs /data/proj/GCB_MB/bcd_CT/single-cell/results_manual/fastq_per_barcode/bcdCT_MB21_02/barcode_$(barcode)/"
+
+# Log file
+log          = bcdCT_MB21_02_$(barcode).log
+
+# stdout
+output       = bcdCT_MB21_02_$(barcode).out
+
+# stderr
+error        = bcdCT_MB21_02_$(barcode).err
+
+# Resource request (see below)
+request_cpus = 2
+
+# Queue the job
+queue barcode in (
+
+)

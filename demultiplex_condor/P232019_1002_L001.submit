@@ -1,0 +1,23 @@
+# Import environment variables
+getenv       = true
+
+# Full path to the program, without any arguments
+executable   = /data/proj/GCB_MB/miniconda3/envs/bcdCT/bin/python3
+
+# Arguments (see below for syntax)
+arguments    = "/data/proj/GCB_MB/bcd_CT/single-cell/code/scripts/debarcode.py -i /data/proj/GCB_MB/bcd_CT/single-cell/fastq/P23209/P23209/P23209_1002/02-FASTQ/211025_A00187_0608_AHL2NKDRXY/P23209_1002_S2_L001_R[123]_001.fastq.gz -o results_manual/fastq_per_barcode/bcdCT_MB21_03/ --single_cell --Nbarcodes 2"
+
+# Log file
+log          = P23209_1002_L001.log
+
+# stdout
+output       = P23209_1002_L001.out
+
+# stderr
+error        = P23209_1002_L001.err
+
+# Resource request (see below)
+request_cpus = 2
+
+# Queue the job
+queue
