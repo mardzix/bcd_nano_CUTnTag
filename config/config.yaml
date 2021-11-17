@@ -1,0 +1,27 @@
+samples:
+  bcdCT_MB21_02:
+    fastq_path:
+      /data/proj/GCB_MB/bcd_CT/single-cell/fastq_per_barcode/bcdCT_MB21_02/
+    barcodes:
+      ATAC: TATAGCCT
+      H3K27ac: ATAGAGGC
+      H3K27me3: CCTATCCT
+    GFP: unsorted
+    Age: P19
+
+  bcdCT_MB21_03:
+    fastq_path:
+      /data/proj/GCB_MB/bcd_CT/single-cell/fastq_per_barcode/bcdCT_MB21_03/
+    barcodes:
+      H3K27ac: ATAGAGGC
+      H3K27me3: CCTATCCT
+    GFP:
+      unsorted
+    Age:
+      P19
+
+general:
+  genome: mm10
+  tempdir: /data/proj/GCB_MB/tmp
+  binwidth: [1000,2500,5000,10000,25000,50000,100000]
+  conda_env: bcdCT

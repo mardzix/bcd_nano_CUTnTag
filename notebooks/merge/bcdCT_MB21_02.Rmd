@@ -1,0 +1,302 @@
+---
+title: "R Notebook"
+output:
+  html_document:
+    df_print: paged
+params:
+  objects:
+  - '/data/proj/GCB_MB/bcd_CT/single-cell/results/bcdCT_MB21_02/ATAC_TATAGCCT/seurat/bin_5000/Seurat_object.Rds'
+  - '/data/proj/GCB_MB/bcd_CT/single-cell/results/bcdCT_MB21_02/H3K27ac_ATAGAGGC/seurat/bin_5000/Seurat_object.Rds'
+  - '/data/proj/GCB_MB/bcd_CT/single-cell/results/bcdCT_MB21_02/H3K27me3_CCTATCCT/seurat/bin_5000/Seurat_object.Rds'
+  out_prefix:
+    "/data/proj/GCB_MB/bcd_CT/single-cell/"
+---
+
+```{r}
+library(Seurat)
+library(Signac)
+library(ggplot2)
+library(UpSetR)
+library(gridExtra)
+library(ensembldb)
+library(EnsDb.Mmusculus.v79)
+print(params)
+```
+
+```{r prep,eval=TRUE}
+get_exp_info_from_path <- function(path){
+  path <- strsplit(x = path,split = "/")[[1]]
+  result <- list()
+  result$bin_size <- path[length(path)-1]
+  result$antibody <- unlist(strsplit(path[length(path)-3],"_"))[1]
+  result$sample   <- path[length(path)-4]
+  return(result)
+}
+
+assay      = 'bins_5000'
+antibodies = lapply(params$objects,function(x){
+  x <- get_exp_info_from_path(x)
+  return(x$antibody)
+  })
+
+antibodies         <- unlist(antibodies)
+assays_to_cluster  <- paste0(antibodies,"_",assay)
+```
+
+```{r load_data,eval=TRUE}
+seurat.ls <- lapply(params$objects,function(x){
+  exp_nfo <- get_exp_info_from_path(x)
+  x.seurat <- readRDS(x)
+  x.seurat <- AddMetaData(object = x.seurat,metadata = exp_nfo)
+  return(x.seurat)
+})
+```
+
+```{r find_common_cells,eval=TRUE}
+# Cells common between the 3 assays
+table(table(unlist(lapply(seurat.ls,colnames))))
+
+
+exp_names  <- unlist(lapply(params$objects,function(x){get_exp_info_from_path(x)$antibody}))
+
+upset.data <- fromList(setNames(lapply(seurat.ls,colnames),exp_names))
+upset(upset.data,order.by = 'freq' )
+
+common_cells = table(unlist(lapply(seurat.ls,colnames)))
+common_cells = names(common_cells[common_cells == 3])
+```
+
+
+
+```{r merge_objects,eval=TRUE}
+
+merge_list_seurat <- function(x.ls,cells){
+  x.ls <- lapply(x.ls,function(x){
+    new_assay_names <- as.list(setNames(paste0(unique(x$antibody),"_",names(x@assays)),names(x@assays)))
+    x <- RenameAssays(x,new_assay_names)
+    return(x)
+    })
+  
+  x.ls <- lapply(x.ls,function(x){
+    x[,common_cells]
+  })
+  
+  x.merged <- x.ls[[1]]
+  
+  for (x in x.ls[2:length(x.ls)]){
+    for(assay in names(x@assays)){
+      x.assay <- CreateAssayObject(counts = x[[assay]]@counts)
+      x.merged[[assay]] <- x.assay
+    }
+  }
+  return(x.merged)
+}
+
+seurat.merged <- merge_list_seurat(seurat.ls,common_cells)
+DimPlot(seurat.merged) + ggtitle(DefaultAssay(seurat.merged))
+
+```
+
+```{r cleanup_ls,eval=TRUE}
+rm(seurat.ls)
+```
+
+
+```{r dimreduce_all_assays,eval=TRUE}
+for(antibody in antibodies){
+  DefaultAssay(seurat.merged) <- paste0(antibody,"_",assay)
+  
+  reduction_LSI  <- paste0('LSI_',antibody,'_')
+  reduction_UMAP <- paste0('UMAP_',antibody,'_')
+  
+  
+  seurat.merged <- RunTFIDF(seurat.merged)
+  seurat.merged <- FindTopFeatures(seurat.merged, min.cutoff = 'q0')
+  
+  seurat.merged <- RunSVD(
+    object = seurat.merged,
+    assay = paste0(antibody,"_",assay),
+    reduction.key = reduction_LSI,
+    reduction.name = reduction_LSI
+  )
+  
+  ElbowPlot(seurat.merged,reduction = reduction_LSI)
+  
+  seurat.merged <- RunUMAP(
+    object = seurat.merged,
+    reduction = reduction_LSI,
+    reduction.name = reduction_UMAP,
+    dims = 2:30
+  )
+  
+  seurat.merged <- FindNeighbors(
+      object = seurat.merged,
+      reduction = reduction_LSI,
+      dims = 2:30
+  )
+  
+  seurat.merged <- FindClusters(
+      object = seurat.merged,
+      algorithm = 3,
+#      resolution = 0.2,
+      verbose = FALSE
+  )
+    
+  seurat.merged@meta.data[,paste0('clusters_',antibody)] <- seurat.merged@active.ident
+  
+  DimPlot(seurat.merged,label=TRUE)
+  DimPlot(seurat.merged,group.by='sample',label=TRUE) + theme(legend.position = 'bottom') + ggtitle(antibody)
+}
+```
+
+
+```{r visualize_clustering,fig.width=3,fig.height=9,eval=TRUE}
+
+p.ls.ls <- lapply(antibodies,function(assay1){
+  p.ls <- lapply(antibodies,function(assay2){
+    DimPlot(seurat.merged,reduction = paste0('UMAP_',assay2,"_"),group.by = paste0('clusters_',assay1),label = TRUE) + ggtitle(paste0("reduction=",assay2," clustering=",assay1))
+  })
+})
+
+
+
+p.ls <- do.call('c',p.ls.ls)
+
+for(i in 1:length(p.ls.ls)){
+  do.call('grid.arrange',p.ls.ls[[i]])
+}
+
+```
+
+```{r run_wnn,eval=TRUE}
+seurat.merged <- FindMultiModalNeighbors(
+  seurat.merged, reduction.list = as.list(paste0("LSI_",antibodies,"_")), 
+  dims.list = list(1:20, 1:20,1:20), modality.weight.name = "CT.weight"
+)
+
+seurat.merged <- RunUMAP(seurat.merged, nn.name = "weighted.nn", reduction.name = "wnn.umap", reduction.key = "wnnUMAP_")
+
+seurat.merged@reductions$wnn.umap
+
+lapply(antibodies,function(a){
+  DimPlot(seurat.merged,reduction = 'wnn.umap',
+        group.by = paste0('clusters_',a),label = TRUE) + ggtitle(paste0("reduction=wnn, clustering=",a))
+})
+
+```
+
+```{r markers,eval=TRUE}
+plot_all_modalities <- function(seurat,gene,assays){
+  lapply(assays,function(a){
+    DefaultAssay(seurat) <- a
+    FeaturePlot(seurat,gene) + ggtitle(a) 
+  })
+}
+
+assays_to_plot <- names(seurat.merged@assays)[grep("_GA",names(seurat.merged@assays))]
+plot_all_modalities(seurat.merged,"Pdgfra",assays_to_plot) 
+
+
+```
+
+
+
+```{r merge_matrix,eval=TRUE}
+
+matrix.ls <- lapply(assays_to_cluster,function(x){
+  out <- seurat.merged[[x]]@counts
+  rownames(out) <- paste0(x,'-',rownames(out))
+  out
+})
+
+matrix.merged <- do.call('rbind',matrix.ls)
+matrix.marged <- matrix.merged[Matrix::rowSums(matrix.merged) != 0,]
+matrix.marged <- matrix.merged[,Matrix::colSums(matrix.merged) != 0]
+
+seurat.merged[['merged']] <- CreateAssayObject(counts = matrix.merged)
+
+```
+
+```{r run_UMAP_merged,fig.width=8,fig.height=8,eval=TRUE}
+assay = 'merged'
+DefaultAssay(seurat.merged) <- assay
+
+seurat.merged <- RunTFIDF(seurat.merged)
+seurat.merged <- FindTopFeatures(seurat.merged, min.cutoff = 'q0')
+  
+seurat.merged <- RunSVD(
+  object = seurat.merged,
+  assay = assay,
+  reduction.key = 'lsi_',
+  reduction.name = 'lsi'
+)
+
+seurat.merged <- RunUMAP(object = seurat.merged,dims = 2:50, reduction = 'lsi')
+  
+seurat.merged <- FindNeighbors(
+    object = seurat.merged,
+    reduction = 'lsi',
+    dims = 2:50
+)
+  
+seurat.merged <- FindClusters(
+    object = seurat.merged,
+    algorithm = 3,
+    verbose = FALSE
+  )
+    
+seurat.merged@meta.data[,paste0('clusters_',assay)] <- seurat.merged@active.ident
+
+ElbowPlot(seurat.merged,reduction = 'lsi')
+
+setwd(params$out_prefix)
+dir.create('results/bcdCT_MB21_02/clustering/')
+saveRDS(object = seurat.merged,file = 'results/bcdCT_MB21_02/clustering/seurat_object.Rds')
+
+
+
+p1 <- DimPlot(seurat.merged,label=TRUE) + ggtitle('merged')
+p2 <- DimPlot(seurat.merged,label=TRUE,reduction = 'UMAP_H3K27ac_') + ggtitle("H3K27ac")
+p3 <- DimPlot(seurat.merged,label=TRUE,reduction = 'UMAP_H3K27me3_')+ ggtitle("H3K27me3")
+p4 <- DimPlot(seurat.merged,label=TRUE,reduction = 'UMAP_ATAC_')+ ggtitle("ATAC")
+
+(p1+p2)/(p3+p4)
+```
+
+
+
+```{r find_markers,eval=TRUE}
+# In case this needs to be read from 
+
+#markers.ls <- lapply(1:3,function(x){
+#  read.csv(file = paste0('/data/proj/GCB_MB/bcd_CT/single-cell/results/bcdCT_MB21_02/clustering/markers_',antibodies[x],'.csv'))
+#})
+
+
+markers.ls <- lapply(assays,function(a){
+  markers <- FindAllMarkers(seurat.merged,min.pct = 0.2,logfc.threshold = 0.5,assay = a)
+})
+
+
+ensdb = EnsDb.Mmusculus.v79
+seqlevelsStyle(ensdb) <- 'UCSC'
+genes.mm10 <- genes(ensdb)
+
+markers.ls <- lapply(markers.ls,function(x){
+  closest <- nearest(StringToGRanges(x$gene),subject = genes.mm10)
+  x$closest_gene <- genes.mm10[closest]$gene_name  
+  x
+})
+
+
+
+lapply(1:length(markers.ls),function(x){
+  write.csv(x = markers.ls[x],file = paste0('/data/proj/GCB_MB/bcd_CT/single-cell/results/bcdCT_MB21_02/clustering/markers_',antibodies[x],'.csv'))
+})
+
+
+
+head(markers.ls[[1]])
+```
+
+

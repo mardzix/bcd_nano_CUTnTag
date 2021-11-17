@@ -1,0 +1,18 @@
+name: bcdCT_test
+dependencies:
+  - python=3.7
+  - conda-forge::R=4.1
+  - pyyaml
+  - tbb=2020.2
+  - bioconda::bowtie2
+  - bioconda::macs2=2.2.7
+  - bioconda::snakemake=5.15
+  - bioconda::deeptools=3.5
+  - bioconda::bedtools=2.30
+  - bioconda::samtools=1.14
+  - conda-forge::htcondor
+  - conda-forge::pandoc
+
+# R packages
+# install.packages(c('argparse','ggplot2','funr','Signac','scales','Seurat','rmarkdown','mclust','GGally','BiocManager','patchwork','markdown','UpSetR','pheatmap','viridis'))
+# BiocManager::install(c('ensembldb','EnsDb.Mmusculus.v79','GenomeInfoDb', 'GenomicRanges', 'IRanges', 'Rsamtools','BiocGenerics','rtracklayer','limma'))

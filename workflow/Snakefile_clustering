@@ -1,0 +1,102 @@
+import itertools
+
+include: "Snakefile_cellranger"
+
+configfile: workflow.basedir + '/../config/config.yaml'
+
+
+samples_list  = list(config['samples'].keys())
+# ['bcdCT_MB21_02', 'bcdCT_MB21_03']
+
+barcodes_dict = {sample: config['samples'][sample]['barcodes'] for sample in samples_list}
+# {'bcdCT_MB21_02': {'ATAC': 'TATAGCCT', 'H3K27ac': 'ATAGAGGC', 'H3K27me3': 'CCTATCCT'}, 'bcdCT_MB21_03': {'H3K27ac': 'ATAGAGGC', 'H3K27me3': 'CCTATCCT'}}
+
+# Rename a modality if it has "_" in its name, substitute "_" with "-"
+for sample in samples_list:
+    for modality in barcodes_dict[sample].keys():
+        if "_" in modality:
+            new_modality = modality.replace("_","-")
+            sys.stderr.write("*** Warning: Renaming modality name {old} to {new}; Can't have \"_\" in modality name *** \n".format(old=modality,new=new_modality))
+            barcodes_dict[sample][new_modality] = barcodes_dict[sample][modality]
+            del(barcodes_dict[sample][modality])
+
+antibodies_list = list(set(itertools.chain(*[barcodes_dict[sample].keys() for sample in barcodes_dict.keys()])))
+# ['H3K27me3', 'ATAC', 'H3K27ac']
+
+modalities_combinations =  [itertools.combinations(list(barcodes_dict[sample].keys()),i) for sample in samples_list for i in range(2,1+len(barcodes_dict[sample].keys()))]
+modalities_combinations = [list(x) for x in list(set(itertools.chain(*modalities_combinations)))]
+# [('H3K27ac', 'H3K27me3'), ('ATAC', 'H3K27me3'), ('ATAC', 'H3K27ac')]
+
+
+
+shell.executable("/bin/bash")
+shell.prefix("source ~/.bash_profile; conda activate " + config['general']['conda_env']  + " ; ")
+
+def get_input_for_multiple_modalities(combination, barcodes_dict, binwidth):
+    samples_pass = []
+    files_pass   = []
+    combination = combination.split("_")
+
+    for sample in samples_list:
+        check_combination = [True if modality in barcodes_dict[sample].keys() else False for modality in combination ]
+        if len(check_combination) == sum(check_combination):
+            samples_pass.append(sample)
+
+    for sample in samples_pass:
+        files = ["results/{sample}/{modality}_{barcode}/seurat/bin_{binwidth}/Seurat_object.Rds".format(sample=sample, \
+                                                                                                        modality = modality, \
+                                                                                                        barcode = barcodes_dict[sample][modality], \
+                                                                                                        binwidth = binwidth) for modality in combination]
+        files_pass.extend(files)
+    return(files_pass)
+
+rule all_demultiplex:
+    input:
+        #expand('results/{sample}/clustering/seurat_object.Rds',sample=['bcdCT_MB21_02']),
+        expand('results/single_modality/{modality}/seurat_{binwidth}/Seurat_object.Rds', modality = antibodies_list,binwidth=5000),
+        # [expand('results/multiple_modalities/{combination}/seurat_{binwidth}/Seurat_object.Rds', combination = "_".join(combination), binwidth=5000) for combination in modalities_combinations]
+
+rule merge_same_modality:
+    input:
+        lambda wildcards: ['results/{sample}/{modality}_{barcode}/seurat/bin_{binwidth}/Seurat_object.Rds'.format( \
+            sample=sample, \
+            modality=wildcards.modality, \
+            barcode = barcodes_dict[sample][wildcards.modality], \
+            binwidth=wildcards.binwidth) \
+                for sample in barcodes_dict.keys() if wildcards.modality in barcodes_dict[sample].keys()]
+    output:
+        'results/single_modality/{modality}/seurat_{binwidth}/Seurat_object.Rds',
+    shell:
+        'Rscript ' + os.path.dirname(workflow.basedir) + '/scripts/merge_objects.R ' + '-i {input} -o {output}'
+
+
+rule merged_diff_modality:
+    input:
+        lambda wildcards: get_input_for_multiple_modalities(combination=wildcards.combination,\
+                                                            barcodes_dict=barcodes_dict, \
+                                                            binwidth = wildcards.binwidth)
+    output:
+        'results/multiple_modalities/{combination}/seurat_{binwidth}/Seurat_object.Rds'
+    shell:
+        'Rscript ' + os.path.dirname(workflow.basedir) + '/scripts/merge_modalities.R -i {input} -o {output}'
+
+
+
+
+# rule cluster:
+#     input:
+#         seurat   = lambda wildcards: ['results/{sample}/{modality}_{barcode}/seurat/bin_5000/Seurat_object.Rds'.format(sample=wildcards.sample,modality=a,barcode=barcodes_dict[wildcards.sample][a]) for a in barcodes_dict[wildcards.sample].keys()],
+#         notebook = os.path.dirname(workflow.basedir) + '/notebooks/bcdCT_MB21_02/{sample}.Rmd',
+#     output:
+#         seurat = 'results/{sample}/clustering/seurat_object.Rds',
+#         report = os.getcwd() + '/results/{sample}/clustering/01.merge_cluster.html',
+#     params:
+#         report     = os.getcwd() + '/results/{sample}/clustering/01.merge_cluster.html',
+#         seurat_in  = lambda wildcards: ",".join(['\'' + os.getcwd() + '/results/{sample}/{modality}_{barcode}/seurat/bin_5000/Seurat_object.Rds\''.format(sample = wildcards.sample,modality=modality,barcode=barcodes_dict[wildcards.sample][modality]) for modality in barcodes_dict[wildcards.sample].keys()]),
+#         out_prefix = "\'" + os.getcwd() + "\'"
+#     shell:
+#         " Rscript -e \"rmarkdown::render(input='{input.notebook}', "
+#         "                                output_file = '{params.report}', "
+#         "                                params=list(objects=c({params.seurat_in}),"
+#         "                                            out_prefix={params.out_prefix}))\" "
+#

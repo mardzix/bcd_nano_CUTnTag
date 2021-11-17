@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="93f37b6b-e9bb-4088-9208-6822ba0c6245" name="monod">
+        <fileTransfer rootFolder="/data/proj/GCB_MB/" accessType="SFTP" host="monod.mbb.ki.se" port="22" sshConfigId="533629e6-3cec-4d36-995d-2a0124e70def" sshConfig="marek@monod.mbb.ki.se:22 key" keyPair="true">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" keepAliveTimeout="0" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>
