@@ -60,8 +60,7 @@ fragments      <- CreateFragmentObject(path = fragments.path,
 peaks_file = args$peaks
 if (!file.exists(peaks_file)) {stop(paste0("Peaks file does not exist:: ", peaks_file))}
 
-# peaks <- rtracklayer::import(peaks_file,format='bed')
-peaks <- read.table(file='results/bcdCT_MB21_02/ATAC_TATAGCCT/peaks/SEACR/peaks.relaxed.bed',stringsAsFactors=FALSE)
+peaks <- read.table(file=peaks_file,stringsAsFactors=FALSE)
 peaks <- GRanges(seq=peaks$V1,ranges=IRanges(start=peaks$V2,end=peaks$V3),score=peaks$V4)
 
 # Genes
@@ -117,6 +116,8 @@ seurat_object <- CreateSeuratObject(counts = counts.matrix.bins,
                      min.features = min_features,
                      min.cells = min_cells)
 
+seurat_object$modality <- args$antibody
+
 
 seurat_object[['peaks']] <- CreateAssayObject(counts = counts.matrix.peaks[,colnames(counts.matrix.peaks) %in% colnames(seurat_object)])
 seurat_object[['GA']]    <- CreateAssayObject(counts = gene.matrix[,colnames(gene.matrix) %in% colnames(seurat_object)])
@@ -141,7 +142,6 @@ saveRDS(object = seurat_object,file = paste0(args$out_prefix,'Seurat_object.Rds'
 cat("*** Clustering and dimensionality reduction \n")
 
 DefaultAssay(seurat_object) <- paste0('bins_',args$window)
-# DefaultAssay(seurat_object) <- "peaks"
 
 # The dimensionality reduction might fail, especially for low complexity datasets, so put the code into try to still save the objects
 try({
@@ -165,8 +165,6 @@ seurat_object <- FindNeighbors(
 
 seurat_object <- FindClusters(
   object = seurat_object,
-  #algorithm = "leiden",
-  resolution = 0.3,
   verbose = TRUE
 )
 

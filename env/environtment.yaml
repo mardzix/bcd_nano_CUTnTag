@@ -10,9 +10,10 @@ dependencies:
   - bioconda::deeptools=3.5
   - bioconda::bedtools=2.30
   - bioconda::samtools=1.14
+  - bioconda::scvelo=0.2.4
   - conda-forge::htcondor
   - conda-forge::pandoc
 
 # R packages
-# install.packages(c('argparse','ggplot2','funr','Signac','scales','Seurat','rmarkdown','mclust','GGally','BiocManager','patchwork','markdown','UpSetR','pheatmap','viridis'))
+# install.packages(c('argparse','ggplot2','funr','Signac','scales','Seurat','rmarkdown','mclust','GGally','BiocManager','patchwork','markdown','UpSetR','pheatmap','viridis','purrr','Rmagic'))
 # BiocManager::install(c('ensembldb','EnsDb.Mmusculus.v79','GenomeInfoDb', 'GenomicRanges', 'IRanges', 'Rsamtools','BiocGenerics','rtracklayer','limma'))
