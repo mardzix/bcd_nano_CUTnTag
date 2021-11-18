@@ -1,0 +1,93 @@
+---
+title: "bcdCT_MB21_02_integration"
+output: html_document
+params:
+  out_prefix: "/data/proj/GCB_MB/bcd_CT/single-cell/results/"
+  sample: "bcdCT_MB21_02"
+  genome: 'mm10'
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r libraryies}
+library(Seurat)
+library(Signac)
+library(ggplot2)
+```
+
+
+```{r load_data}
+seurat <- readRDS(file=paste0(params$out_prefix,params$sample,"/clustering/seurat_object.Rds"))
+
+reference.path <- '/data/proj/GCB_MB/single-cell-CUT-Tag/nbiotech_paper/analysis/results/H3K27me3/clustering/01.clustering.Rds'
+reference <- readRDS(file = reference.path)
+```
+```{r}
+assay = 'bins_5000'
+antibody = 'H3K27me3'
+
+DefaultAssay(seurat) <- paste0(antibody,'_',assay)
+DefaultAssay(reference) <- assay
+
+common.features <- table(c(rownames(seurat),rownames(reference)))
+common.features <- names(common.features[common.features==2])
+
+seurat$clustering_final <- seurat@active.ident
+reference$clustering_final <- reference@active.ident
+
+DimPlot(seurat)
+DimPlot(reference)
+```
+
+```{r merge, fig.width=9,fig.height=6}
+merged.matrix   <- cbind(seurat[[paste0(antibody,'_',assay)]]@counts[common.features,],reference[[assay]]@counts[common.features,])
+
+common.metadata <- table(c(colnames(seurat@meta.data),colnames(reference@meta.data)))
+common.metadata <- names(common.metadata[common.metadata==2])
+
+merged.metadata <- rbind(seurat@meta.data[,common.metadata],reference@meta.data[,common.metadata])
+
+integrated <- CreateSeuratObject(counts = merged.matrix,project = 'integration',assay = paste0('integrated_',assay),meta.data = merged.metadata)
+
+assay = paste0('integrated_',assay)
+DefaultAssay(integrated) <- assay
+
+integrated <- RunTFIDF(integrated)
+integrated <- FindTopFeatures(integrated, min.cutoff = 'q0')
+  
+integrated <- RunSVD(
+  object = integrated,
+  assay = assay,
+  reduction.key = 'lsi_',
+  reduction.name = 'lsi'
+)
+
+integrated <- RunUMAP(object = integrated,dims = 3:40, reduction = 'lsi')
+  
+integrated <- FindNeighbors(
+    object = integrated,
+    reduction = 'lsi',
+    dims = 2:50
+)
+  
+integrated <- FindClusters(
+    object = integrated,
+    algorithm = 3,
+    verbose = FALSE
+  )
+    
+Integrated <- SetIdent(object = integrated,cells = c(colnames(seurat),colnames(reference)), value = c(seurat@active.ident,reference@active.ident))
+
+DimPlot(integrated,group.by = 'orig.ident')
+
+p1 <- DimPlot(Integrated[,Integrated$orig.ident == 'bcdCT'],label=TRUE,pt.size = 0.2) + ggtitle("bcdCT_H3K27me3-integrated")
+p2 <- DimPlot(Integrated[,Integrated$orig.ident != 'bcdCT'],label=TRUE,pt.size = 0.2) + ggtitle("nbiotech_H3K27me3-integrated")
+p3 <- DimPlot(seurat,label=TRUE,pt.size=0.2) + ggtitle("bcdCT_H3K27me3-original")
+
+(p1+p2)/p3
+
+```
+

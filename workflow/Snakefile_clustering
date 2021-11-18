@@ -54,7 +54,7 @@ rule all_demultiplex:
     input:
         #expand('results/{sample}/clustering/seurat_object.Rds',sample=['bcdCT_MB21_02']),
         expand('results/single_modality/{modality}/seurat_{binwidth}/Seurat_object.Rds', modality = antibodies_list,binwidth=5000),
-        # [expand('results/multiple_modalities/{combination}/seurat_{binwidth}/Seurat_object.Rds', combination = "_".join(combination), binwidth=5000) for combination in modalities_combinations]
+        [expand('results/multiple_modalities/{combination}/seurat_{binwidth}/Seurat_object.Rds', combination = "_".join(combination), binwidth=5000) for combination in modalities_combinations]
 
 rule merge_same_modality:
     input:

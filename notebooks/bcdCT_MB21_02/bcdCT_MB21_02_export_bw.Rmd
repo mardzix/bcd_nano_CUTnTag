@@ -1,0 +1,45 @@
+---
+title: "bcdCT_MB21_02_export_bw.Rmd"
+output: html_document
+params:
+  out_prefix: "/data/proj/GCB_MB/bcd_CT/single-cell/results/"
+  sample: "bcdCT_MB21_02"
+  genome: 'mm10'
+---
+
+```{r libraries}
+library(Seurat)
+library(Signac)
+```
+
+
+```{r load_data}
+seurat <- readRDS(file=paste0(params$out_prefix,params$sample,"/clustering/seurat_object.Rds"))
+```
+
+```{r}
+source('/data/proj/GCB_MB/bcd_CT/single-cell/code/scripts/func.R')
+
+modalities  <- list.files(paste0(params$out_prefix,params$sample),pattern = ".*_[ATCG]+")
+antibodies  <- unlist(lapply(strsplit(modalities,'_'),'[',1))
+chrom_sizes <- getChromInfoFromUCSC(params$genome)
+assay <- 'bins_5000'
+
+
+for(modality in modalities){
+  antibody <- unlist(lapply(strsplit(modality,'_'),'[',1))
+  DefaultAssay(seurat) <- paste0(antibody,'_',assay)
+  
+  fragments <- paste0(params$out_prefix,params$sample,'/',modality,'/fragments/fragments.tsv.gz')
+  fragments <- rtracklayer::import(fragments,format='bed')
+  
+  dir.create(paste0(params$out_prefix,params$sample,'/clustering/bigwig/',modality),recursive = TRUE)
+  lapply(levels(seurat@active.ident),function(x){
+    exportBW(object = seurat,
+             cluster = x,
+             fragments = fragments,
+             path = paste0(params$out_prefix,params$sample,'/clustering/bigwig/',modality,'/cluster_',x,'.bw'),chrom.sizes = chrom_sizes)
+  })
+}
+```
+
