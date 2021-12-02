@@ -53,8 +53,15 @@ def get_input_for_multiple_modalities(combination, barcodes_dict, binwidth):
 rule all_demultiplex:
     input:
         #expand('results/{sample}/clustering/seurat_object.Rds',sample=['bcdCT_MB21_02']),
+        # Merging
         expand('results/single_modality/{modality}/seurat_{binwidth}/Seurat_object.Rds', modality = antibodies_list,binwidth=5000),
-        [expand('results/multiple_modalities/{combination}/seurat_{binwidth}/Seurat_object.Rds', combination = "_".join(combination), binwidth=5000) for combination in modalities_combinations]
+        [expand('results/multiple_modalities/{combination}/seurat_{binwidth}/Seurat_object.Rds', combination = "_".join(combination), binwidth=5000) for combination in modalities_combinations],
+        # Clustering
+        expand('results/single_modality/{modality}/seurat_{binwidth}/Seurat_object_clustered.Rds',modality = antibodies_list,binwidth=5000),
+        [expand('results/multiple_modalities/{combination}/seurat_{binwidth}/Seurat_object_clustered.Rds', combination = "_".join(combination), binwidth=5000) for combination in modalities_combinations],
+        # Integraton
+        expand('results/single_modality/{modality}/seurat_{binwidth}/integration/integration_RNA.Rds',modality=antibodies_list,binwidth=5000),
+        [expand('results/multiple_modalities/{combination}/seurat_{binwidth}/integration/integration_RNA.Rds',combination="_".join(combination),binwidth=5000) for combination in modalities_combinations],
 
 rule merge_same_modality:
     input:
@@ -83,20 +90,23 @@ rule merged_diff_modality:
 
 
 
-# rule cluster:
-#     input:
-#         seurat   = lambda wildcards: ['results/{sample}/{modality}_{barcode}/seurat/bin_5000/Seurat_object.Rds'.format(sample=wildcards.sample,modality=a,barcode=barcodes_dict[wildcards.sample][a]) for a in barcodes_dict[wildcards.sample].keys()],
-#         notebook = os.path.dirname(workflow.basedir) + '/notebooks/bcdCT_MB21_02/{sample}.Rmd',
-#     output:
-#         seurat = 'results/{sample}/clustering/seurat_object.Rds',
-#         report = os.getcwd() + '/results/{sample}/clustering/01.merge_cluster.html',
-#     params:
-#         report     = os.getcwd() + '/results/{sample}/clustering/01.merge_cluster.html',
-#         seurat_in  = lambda wildcards: ",".join(['\'' + os.getcwd() + '/results/{sample}/{modality}_{barcode}/seurat/bin_5000/Seurat_object.Rds\''.format(sample = wildcards.sample,modality=modality,barcode=barcodes_dict[wildcards.sample][modality]) for modality in barcodes_dict[wildcards.sample].keys()]),
-#         out_prefix = "\'" + os.getcwd() + "\'"
-#     shell:
-#         " Rscript -e \"rmarkdown::render(input='{input.notebook}', "
-#         "                                output_file = '{params.report}', "
-#         "                                params=list(objects=c({params.seurat_in}),"
-#         "                                            out_prefix={params.out_prefix}))\" "
-#
+rule cluster:
+    input:
+        'results/{x}/{modality}/seurat_{binwidth}/Seurat_object.Rds'
+    output:
+        'results/{x}/{modality}/seurat_{binwidth}/Seurat_object_clustered.Rds'
+    params:
+        script = os.path.dirname(workflow.basedir) + '/scripts/UMAP_cluster.R'
+    shell:
+        "Rscript {params.script} -i {input} -o {output}"
+
+rule integrate_with_scRNA:
+    input:
+        seurat = 'results/{x}/{modality}/seurat_{binwidth}/Seurat_object_clustered.Rds',
+        rna    = '/data/proj/GCB_MB/single-cell-CUT-Tag/nbiotech_paper/analysis/results/Sten_RNA/clustering/01.clustering_20000cells.Rds', # TODO fix path here
+    output:
+        'results/{x}/{modality}/seurat_{binwidth}/integration/integration_RNA.Rds'
+    params:
+        script = os.path.dirname(workflow.basedir) + '/scripts/integrate_CT_RNAseq.R'
+    shell:
+        "Rscript {params.script} -i {input.seurat} -r {input.rna} -o {output}"
