@@ -1,0 +1,70 @@
+---
+title: "allevium"
+output: html_notebook
+params:
+  out_prefix: "/data/proj/GCB_MB/bcd_CT/single-cell/results/"
+---
+
+```{r libraries}
+library(Seurat)
+library(Signac)
+library(ggplot2)
+library(ggalluvial)
+library(dplyr)
+
+```
+
+
+```{r load_data}
+
+seurat.ls <- readRDS(file=paste0(params$out_prefix,'multiple_modalities/ATAC_H3K27ac_H3K27me3/seurat_5000/Seurat_object_clustered.Rds'))
+
+```
+
+```{r}
+p.ls <- lapply(seurat.ls,function(x){
+  p1 <- DimPlot(x,label=TRUE)
+  p2 <- DimPlot(x,group.by='sample',label=TRUE) + theme(legend.position = 'bottom') + ggtitle(unique(seurat_object$modality))
+  return(list(p1,p2))
+})
+
+p.ls
+
+```
+
+```{r}
+idents.ls <- lapply(seurat.ls,function(x){
+  x@active.ident
+})
+
+
+idents.ls.df <- lapply(names(idents.ls)[c(2,3)],function(x){
+  idents.ls[[x]] <- as.data.frame(idents.ls[[x]])
+  colnames(idents.ls[[x]]) <- 'identity'
+  idents.ls[[x]]$modality <- x
+  idents.ls[[x]]$Freq <- 1
+  idents.ls[[x]]$barcode <- rownames(idents.ls[[x]])
+#  idents.ls[[x]] <- head(idents.ls[[x]],1000)
+#   idents.ls[[x]]$identity <- as.factor(as.character(idents.ls[[x]]$identity))
+  idents.ls[[x]]
+})
+
+idents.df      <- purrr::reduce(idents.ls.df,rbind)
+idents.df$modality <- as.factor(idents.df$modality)
+
+# idents.df.freq <- cbind.data.frame(idents.ls) %>% count(across(colnames(cbind.data.frame(idents.ls))))
+
+
+
+library(ggalluvial )
+
+ggplot(data=idents.df, aes(x = modality, stratum = identity, alluvium = barcode, y = Freq, fill = identity, label = identity)) +
+  scale_x_discrete(expand = c(.1, .1)) +
+  geom_flow() +
+  geom_stratum(alpha = 1) +
+  geom_text(stat = "stratum", size = 3) +
+  theme(legend.position = "none") 
+
+```
+
+

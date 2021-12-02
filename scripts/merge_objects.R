@@ -20,14 +20,6 @@ seurat.ls <- lapply(args$input,function(x){
   readRDS(file=x)
 })
 
-if(length(seurat.ls) > 1)
-  {
-  seurat.merged <- seurat.merged <- purrr::reduce(seurat.ls,merge)
-} else if (length(seurat.ls) == 1) 
-  {
-  seurat.merged <- seurat.ls[[1]]
-}
-
-
+seurat.merged <- purrr::reduce(seurat.ls,merge)
 saveRDS(object = seurat.merged,file = args$output)
 

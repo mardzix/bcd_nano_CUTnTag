@@ -9,22 +9,28 @@ set.seed(1234)
 ########### Arguments parser
 parser <- ArgumentParser()
 parser$add_argument("-i", "--input", type="character", default='foo', 
-                    help="seurat objects to be merged",nargs="+")
+                    help="seurat object to be clustered")
 parser$add_argument("-o", "--output", type="character", default='foo', 
                     help="output file")
 parser$add_argument("-a","--assay",type="character",default="bins_5000",
                     help="Assay to be used for dimreduce and clustering")
+parser$add_argument('-d','--ndim',type='integer',default=50,
+                  help='Number of LSI components to use for UMAP and KNN')
+parser$add_argument('-m','--modality',type='character',
+                    help='modality to use for clustering if list of objects',default='merged')
 args <- parser$parse_args()
 
 ######################## End arguments parser
+# args <- list()
+# ##args$input <- c("results/single_modality/H3K27me3/seurat_5000/Seurat_object.Rds")
+# args$input <- c("results/multiple_modalities/ATAC_H3K27mer/seurat_5000/Seurat_object.Rds")
+# args$assay <- 'bins_5000'
+# args$ndim <- 50
+# args$output <- "/data/proj/GCB_MB/bcd_CT/single-cell/data.Rds"
 
-# args$input <- c("results/single_modality/H3K27me3/seurat_5000/Seurat_object.Rds")
-# args$input <- c("results/multiple_modalities/ATAC_H3K27ac/seurat_5000/Seurat_object.Rds")
-
-seurat.ls <- lapply(args$input,readRDS)
-
-lapply(seurat.ls,function(seurat_object){
+UMAP_and_cluster <- function(seurat_object){
   DefaultAssay(seurat_object) <- args$assay
+  modality <- unique(seurat_object$modality)
   
   seurat_object <- RunTFIDF(seurat_object)
   seurat_object <- FindTopFeatures(seurat_object)
@@ -35,16 +41,21 @@ lapply(seurat.ls,function(seurat_object){
     reduction.name = 'lsi'
   )
   
+  p.depthcor <- DepthCor(seurat_object)
+  ggsave(filename = paste0(dirname(args$output),'/',modality,'_',args$assay,'_depthcor.png'),width=4,height=4)
+  
+  dims          <- c(2:args$ndim)
+  
   seurat_object <- RunUMAP(
     object = seurat_object,
     reduction = 'lsi',
-    dims = 3:40
+    dims = dims
   )
   
   seurat_object <- FindNeighbors(
     object = seurat_object,
     reduction = 'lsi',
-    dims = 2:40
+    dims = dims
   )
   
   seurat_object <- FindClusters(
@@ -58,6 +69,24 @@ lapply(seurat.ls,function(seurat_object){
   
   p1 <- DimPlot(seurat_object,label=TRUE)
   p2 <- DimPlot(seurat_object,group.by='sample',label=TRUE) + theme(legend.position = 'bottom') + ggtitle(unique(seurat_object$modality))
-  p1+p2
-  
-})
+  ggsave(plot = p1+p2,
+         filename =  paste0(dirname(args$output),'/',modality,'_',args$assay,'_UMAP.png'),width = 8,height = 4)
+  return(seurat_object)
+ 
+}
+
+# Load data
+seurat.ls <- readRDS(args$input)
+
+# If single modality
+if(length(seurat.ls) ==1){
+  seurat.ls <- UMAP_and_cluster(seurat.ls)
+  }
+
+# If multiple modalities
+if(length(seurat.ls) > 1){
+  seurat.ls[[args$modality]] <- UMAP_and_cluster(seurat.ls[[args$modality]])
+}
+
+# Save
+saveRDS(object = seurat.ls,file = args$output)

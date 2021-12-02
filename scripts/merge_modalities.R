@@ -4,6 +4,7 @@ library(Seurat)
 library(Signac)
 library(argparse)
 library(UpSetR)
+library(purrr)
 
 set.seed(1234)
 
@@ -90,51 +91,40 @@ cat(paste0("*** After filtering retained ",ncells_after," out of ",ncells_before
 
 seurat.modality.ls <- list()
 metadata.ls        <- list()
-
-print(seurat.ls)
+matrix.ls          <- list()
 
 for(modality in unique(modalities)){
   print(modality)
+  matrix.ls[[modality]] <- list()
   
   # Merge cells with the same modality
   modalities.to.merge               <- grep(modality,modalities)
-  if(length(modalities.to.merge) == 1){
-    seurat.modality.ls[[modality]] <- seurat.ls[[modalities.to.merge]]
-    } else {
-    seurat.modality.ls[[modality]]    <- do.call('merge',seurat.ls[modalities.to.merge])
-    }
+  seurat.modality.ls[[modality]]    <- purrr::reduce(seurat.ls[modalities.to.merge],merge)
   seurat.modality.ls[[modality]]    <- AddMetaData(seurat.modality.ls[[modality]],metadata = list("modality"=modality))
   
   # Create merged metadata object
   metadata.ls[[modality]]           <- seurat.modality.ls[[modality]]@meta.data
-  colnames(metadata.ls[[modality]]) <- paste0(modality,'.',colnames(metadata.ls[[modality]]))
+  colnames(metadata.ls[[modality]]) <- paste0('single.',modality,'.',colnames(metadata.ls[[modality]]))
   
   
   for(assay in names(seurat.modality.ls[[modality]]@assays)){
-    cat(paste0("*** Renaming features in assay ", assay,"\n"))
+   cat(paste0("*** Renaming features in assay ", assay,"\n"))
+
     # Rename the feature names
     newnames <- paste0(modality,'-',seurat.modality.ls[[modality]][[assay]]@counts@Dimnames[[1]])
-  
-  
-    seurat.modality.ls[[modality]][[assay]]@counts@Dimnames[[1]]       <- newnames
-    seurat.modality.ls[[modality]][[assay]]@data@Dimnames[[1]]         <- newnames
-  
-    #Try to do the whole thing without renaming the assays
-  #   # Rename the assay
-  #   seurat.modality.ls[[modality]] <- RenameAssays(seurat.modality.ls[[modality]],setNames(paste0(modality,'.',assay),assay))
-  }  
+    
+    matrix.ls[[modality]][[assay]]             <- seurat.modality.ls[[modality]][[assay]]@counts
+    rownames(matrix.ls[[modality]][[assay]])   <- newnames
+
+    # seurat.modality.ls[[modality]][[assay]]@counts@Dimnames[[1]]       <- newnames
+    # seurat.modality.ls[[modality]][[assay]]@data@Dimnames[[1]]         <- newnames
+    # rownames(seurat.modality.ls[[modality]][[assay]]@meta.features)    <- newnames
+  }
 }
 
 
 # Merge the metadata
-if(length(metadata.ls) == 1){
-  metadata.merged <- metadata.ls[[1]]
-} else{
-  metadata.merged     <- do.call('cbind',metadata.ls)
-}
-
-#
-# Merge count matrices
+metadata.merged     <- purrr::reduce(metadata.ls,cbind)
 
 # Find common assays
 common.assays <- lapply(seurat.modality.ls,function(x){names(x@assays)})
@@ -144,25 +134,34 @@ common.assays <- names(common.assays[common.assays == length(seurat.modality.ls)
 
 # Merge the count matrices
 cat("*** Merging count matrices\n") 
-count.matrices.ls <- lapply(common.assays,function(assay){
-  count.matrix.ls <- lapply(seurat.modality.ls,function(x){
-    x[[assay]]@counts
-    })
-  return(do.call('rbind',count.matrix.ls))
+
+matrix.merged <- list()
+for(assay in common.assays){
+  matrix.to.merge.ls <- lapply(matrix.ls,function(x){
+    x[[assay]]
   })
-names(count.matrices.ls) <- common.assays
+  matrix.merged[[assay]] <- purrr::reduce(.x = matrix.to.merge.ls,.f = rbind)
+}
+
 
 # Create a merged seurat object
 cat("*** Creating new seurat object\n")
-seurat.modality.ls[['merged']] <- CreateSeuratObject(counts = count.matrices.ls[[1]],
+seurat.modality.ls[['merged']] <- CreateSeuratObject(counts = matrix.merged[[1]],
                                                      project = 'bcdCT',
-                                                     assay = names(count.matrices.ls)[1],
+                                                     assay = names(matrix.merged)[1],
                                                      meta.data = metadata.merged)
 # Add the rest of the assays
 cat("*** Adding assays to the seurat object\n")
 for(assay in common.assays[2:length(common.assays)]){
-  seurat.modality.ls[['merged']][[assay]] <- CreateAssayObject(counts = count.matrices.ls[[assay]])
+  seurat.modality.ls[['merged']][[assay]] <- CreateAssayObject(counts = matrix.merged[[assay]])
 }
+
+# Add some metadata
+seurat.modality.ls[['merged']] <- AddMetaData(seurat.modality.ls[['merged']],
+                                               metadata=list('modality'=paste0(c('merge',unique(modalities)),collapse = '_')))
+
+seurat.modality.ls[['merged']] <- AddMetaData(seurat.modality.ls[['merged']],
+                                              metadata=list('sample' = seurat.modality.ls[[1]]$sample))
 
 
 # Export data

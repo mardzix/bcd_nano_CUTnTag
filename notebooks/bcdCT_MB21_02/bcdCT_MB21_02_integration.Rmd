@@ -25,6 +25,8 @@ seurat <- readRDS(file=paste0(params$out_prefix,params$sample,"/clustering/seura
 reference.path <- '/data/proj/GCB_MB/single-cell-CUT-Tag/nbiotech_paper/analysis/results/H3K27me3/clustering/01.clustering.Rds'
 reference <- readRDS(file = reference.path)
 ```
+
+
 ```{r}
 assay = 'bins_5000'
 antibody = 'H3K27me3'
