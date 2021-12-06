@@ -25,3 +25,8 @@ general:
   tempdir: /data/proj/GCB_MB/tmp
   binwidth: [1000,2500,5000,10000,25000,50000,100000]
   conda_env: bcdCT
+
+nbiotech_data:
+  url:
+    bigwig: https://ftp.ncbi.nlm.nih.gov/geo/series/GSE157nnn/GSE157637/suppl/GSE157637_bigwig.tar.gz
+    fragments: https://ftp.ncbi.nlm.nih.gov/geo/series/GSE157nnn/GSE157637/suppl/GSE157637_modified_fragments_file_cellranger.tar.gz

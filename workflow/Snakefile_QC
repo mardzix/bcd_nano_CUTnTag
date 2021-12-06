@@ -1,0 +1,31 @@
+include: "Snakefile_preprocess"
+include: "Snakefile_clustering"
+
+configfile: workflow.basedir + '/../config/config.yaml'
+
+
+rule all:
+    input:
+        # Download
+        expand('results/nbiotech_data/{data}.tar.gz',data = config['nbiotech_data']['url'].keys()),
+        expand('results/nbiotech_data/{data}/',data = config['nbiotech_data']['url'].keys())
+        # 'results/nbiotech_data/GSE157637_bigwig.tar.gz',
+        # 'results/nbiotech_data/GSE157637_modified_fragments_file_cellranger.tar.gz',
+
+rule download_nbiotech_data:
+    output:
+        'results/nbiotech_data/{data}.tar.gz',
+    params:
+        url = lambda wildcards: config['nbiotech_data']['url'][wildcards.data]
+    shell:
+        "wget -O {output} {params.url}; "
+
+rule untar_downloaded:
+    input:
+        archive = 'results/nbiotech_data/{data}.tar.gz'
+    output:
+        folder  = directory('results/nbiotech_data/{data}/')
+    params:
+    shell:
+        "tar -xvzf {input.archive} -C {output.folder}"
+

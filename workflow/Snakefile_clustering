@@ -1,6 +1,6 @@
 import itertools
 
-include: "Snakefile_cellranger"
+include: "Snakefile_preprocess"
 
 configfile: workflow.basedir + '/../config/config.yaml'
 
@@ -52,10 +52,11 @@ rule all_demultiplex:
         ############################
         # Single modality analysis #
         ############################
-        expand('results/single_modality/{modality}/seurat_{binwidth}/Seurat_object.Rds', modality = antibodies_list,binwidth=binsize),         # Merge
-        expand('results/single_modality/{modality}/seurat_{binwidth}/Seurat_object_clustered.Rds',modality=antibodies_list,binwidth=binsize),  # Cluster
-        expand('results/single_modality/{modality}/seurat_{binwidth}/Seurat_object_clustered_renamed.Rds', modality=antibodies_list, binwidth=binsize),  # Rename
-        expand('results/single_modality/{modality}/seurat_{binwidth}/integration/integration_RNA.Rds', modality=antibodies_list, binwidth=binsize), # Integration with scRNA-seq
+        expand('results/single_modality/{modality}/seurat_{binwidth}/Seurat_object.Rds', modality = antibodies_list,binwidth=binsize),                      # Merge
+        expand('results/single_modality/{modality}/seurat_{binwidth}/Seurat_object_clustered.Rds',modality=antibodies_list,binwidth=binsize),               # Cluster
+        expand('results/single_modality/{modality}/seurat_{binwidth}/Seurat_object_clustered_renamed.Rds', modality=antibodies_list, binwidth=binsize),     # Rename
+        expand('results/single_modality/{modality}/seurat_{binwidth}/integration/integration_RNA.Rds', modality=antibodies_list, binwidth=binsize),         # Integration with scRNA-seq
+        expand('results/single_modality/{modality}/seurat_{binwidth}/markers.csv', modality = antibodies_list, binwidth = binsize),                        # Find markers
 
         ################################
         # Multiple modalities analysis #
@@ -152,3 +153,13 @@ rule export_bw:
         bigwig    = directory('results/single_modality/{modality}/bigwig/')
     shell:
         "Rscript {input.script}  -i {input.seurat} -f {input.fragments} -o {output.bigwig}"
+
+rule find_markers:
+    input:
+        seurat = 'results/single_modality/{modality}/seurat_' + str(binsize) + '/Seurat_object_clustered_renamed.Rds',
+        script = os.path.dirname(workflow.basedir) + '/scripts/find_markers.R'
+    output:
+        markers = 'results/single_modality/{modality}/seurat_' + str(binsize) + '/markers.csv',
+    #    markers_positive = 'results/single_modality/{modality}/seurat_' + str(binsize) + '/markers_positive.csv',
+    shell:
+        "Rscript {input.script} -i {input.seurat} -o {output.markers}"

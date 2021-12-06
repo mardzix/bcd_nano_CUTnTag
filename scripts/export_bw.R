@@ -23,8 +23,8 @@ args <- parser$parse_args()
 ###################
 # args <- list()
 # args$input <- '/data/proj/GCB_MB/bcd_CT/single-cell/results/single_modality/H3K27ac/seurat_5000/Seurat_object_clustered_renamed.Rds'
-
-saveRDS(args,'arguments.Rds')
+# saveRDS(args,'arguments.Rds')
+###################
 
 cat("*** Loading data \n")
 seurat_object <- readRDS(file=args$input)
@@ -32,6 +32,8 @@ seurat_object <- readRDS(file=args$input)
 chrom.sizes <- getChromInfoFromUCSC('mm10',assembled.molecules.only=TRUE)
 fragments <- read.delim(gzfile(args$fragments),sep='\t',row.names=NULL,header=FALSE)
 fragments <- GRanges(seqnames=fragments$V1, ranges = IRanges(start=fragments$V2,end=fragments$V3),name=fragments$V4, score=fragments$V5)
+
+dir.create(args$output_folder,recursive = TRUE)
 
 lapply(levels(seurat_object@active.ident),function(x){
   exportBW(object = seurat_object,
