@@ -5,7 +5,7 @@ date: "01/12/2021"
 output: html_document
 params:
   out_prefix: "/data/proj/GCB_MB/bcd_CT/single-cell/results/"
-  modality: "H3K27ac"
+  modality: "ATAC"
   binsize: 5000
 ---
 
@@ -27,31 +27,27 @@ seurat <- readRDS(file=paste0(params$out_prefix,'/single_modality/',params$modal
 
 ```{r,fig.width=6,fig.height=6}
 idents <- c(
-    '0' = 'Astro_1',
-    '1' = 'Astro_2',
-    '2' = 'Vascular_1',
-    '3' = 'Neuron_1',
-    '4' = 'MOL',
-    '5' = 'Microglia',
-    '6' = 'PVM',
-    '7' = 'Neuron_2',
-    '8' = 'Vascular_2',
-    '9' = 'Bergmann glia',
-    '10' = 'Vascular 3',
-    '11' = 'OPC-COP',
-    '12' = 'OEC',
-    '13' = 'Neuron_3',
-    '14' = 'Immune_3',
-    '15' = 'Radial glia',
-    '16' = 'Neuron_4',
-    '17' = 'Neuron_5',
-    '18' = 'Neuron_6',
-    '19' = 'Choroid plexus')
+  '0' = 'Astro_1',
+  '1' = 'OLG',
+  '2' = 'Microglia',
+  '3' = 'Vascular_1',
+  '4' = 'Neuron_1',
+  '5' = 'Neuron_2',
+  '6' = 'Astro_2',
+  '7' = 'Vascular_2',
+  '8' = 'Neuron_3',
+  '9' = 'Vascular_3',
+  '10' = 'Choroid plexus',
+  '11' = 'OEC'
+)
 
 seurat.renamed <- RenameIdents(seurat,idents)
 DimPlot(seurat.renamed,label=TRUE,repel=TRUE)+ NoLegend()
 ```
 
+
 ```{r}
 saveRDS(object = seurat.renamed, file = paste0(params$out_prefix,'/single_modality/',params$modality,'/seurat_',params$binsize,'/Seurat_object_clustered_renamed.Rds'))
 ```
+
+

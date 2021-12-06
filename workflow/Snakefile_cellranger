@@ -23,7 +23,7 @@ rule all_cellranger:
         barcodes_sum  = ['results/{sample}/{antibody}_{barcode}/barcode_metrics/all_barcodes.txt'.format(sample = sample, antibody = antibody, barcode = barcodes_dict[sample][antibody]) for sample in samples_list  for antibody in barcodes_dict[sample].keys()],
         cell_pick     = ['results/{sample}/{antibody}_{barcode}/cell_picking/metadata.csv'.format(sample = sample, antibody = antibody, barcode = barcodes_dict[sample][antibody]) for sample in samples_list  for antibody in barcodes_dict[sample].keys()],
         seurat        = ['results/{sample}/{antibody}_{barcode}/seurat/bin_{binwidth}/Seurat_object.Rds'.format(sample = sample, antibody = antibody, barcode = barcodes_dict[sample][antibody],binwidth = binwidth) for sample in samples_list  for antibody in barcodes_dict[sample].keys() for binwidth in config['general']['binwidth']],
-        cell_pick_summary = expand('results/{sample}/pick_cells.nb.html',sample = samples_list),
+
 
 rule run_cellranger:
     input:

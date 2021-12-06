@@ -24,7 +24,7 @@ seurat.ls <- readRDS(file=paste0(params$out_prefix,'multiple_modalities/ATAC_H3K
 ```{r}
 p.ls <- lapply(seurat.ls,function(x){
   p1 <- DimPlot(x,label=TRUE)
-  p2 <- DimPlot(x,group.by='sample',label=TRUE) + theme(legend.position = 'bottom') + ggtitle(unique(seurat_object$modality))
+  p2 <- DimPlot(x,group.by='sample',label=TRUE) + theme(legend.position = 'bottom') + ggtitle(unique(x$modality))
   return(list(p1,p2))
 })
 
@@ -33,12 +33,12 @@ p.ls
 ```
 
 ```{r}
-idents.ls <- lapply(seurat.ls,function(x){
+idents.ls <- lapply(seurat.ls[1:3],function(x){
   x@active.ident
 })
 
 
-idents.ls.df <- lapply(names(idents.ls)[c(2,3)],function(x){
+idents.ls.df <- lapply(names(idents.ls)[c(1,2,3)],function(x){
   idents.ls[[x]] <- as.data.frame(idents.ls[[x]])
   colnames(idents.ls[[x]]) <- 'identity'
   idents.ls[[x]]$modality <- x
@@ -55,14 +55,16 @@ idents.df$modality <- as.factor(idents.df$modality)
 # idents.df.freq <- cbind.data.frame(idents.ls) %>% count(across(colnames(cbind.data.frame(idents.ls))))
 
 
+```
 
+```{r, fig.width=6,fig.height=12}
 library(ggalluvial )
 
 ggplot(data=idents.df, aes(x = modality, stratum = identity, alluvium = barcode, y = Freq, fill = identity, label = identity)) +
   scale_x_discrete(expand = c(.1, .1)) +
-  geom_flow() +
+  geom_flow(alpha=0.8) +
   geom_stratum(alpha = 1) +
-  geom_text(stat = "stratum", size = 3) +
+  geom_text(stat = "stratum", size = 8) +
   theme(legend.position = "none") 
 
 ```
