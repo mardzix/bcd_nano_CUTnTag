@@ -57,11 +57,11 @@ fragments      <- CreateFragmentObject(path = fragments.path,
 ####################
 
 # Peaks
-# peaks_file = args$peaks
-# if (!file.exists(peaks_file)) {stop(paste0("Peaks file does not exist:: ", peaks_file))}
-# 
-# peaks <- read.table(file=peaks_file,stringsAsFactors=FALSE)
-# peaks <- GRanges(seq=peaks$V1,ranges=IRanges(start=peaks$V2,end=peaks$V3),score=peaks$V4)
+peaks_file = args$peaks
+if (!file.exists(peaks_file)) {stop(paste0("Peaks file does not exist:: ", peaks_file))}
+
+peaks <- read.table(file=peaks_file,stringsAsFactors=FALSE)
+peaks <- GRanges(seq=peaks$V1,ranges=IRanges(start=peaks$V2,end=peaks$V3),score=peaks$V4)
 
 # Genes
 genebodyandpromoter.coords.flat <- load_ensembl_annot(genome_version)
@@ -77,10 +77,10 @@ names(genes.key)      <- GRangesToString(genebodyandpromoter.coords.flat)
 # Create matrices #
 ###################
 
-# cat("*** Creating peaks matrix \n")
-# counts.matrix.peaks <- FeatureMatrix(fragments = fragments,
-#                                      features = peaks,
-#                                      cells = metadata$barcode)
+cat("*** Creating peaks matrix \n")
+counts.matrix.peaks <- FeatureMatrix(fragments = fragments,
+                                     features = peaks,
+                                     cells = metadata$barcode)
 
 
 cat("*** Creating genomic bin matrix \n")
@@ -119,7 +119,7 @@ seurat_object <- CreateSeuratObject(counts = counts.matrix.bins,
 seurat_object$modality <- args$antibody
 
 
-#seurat_object[['peaks']] <- CreateAssayObject(counts = counts.matrix.peaks[,colnames(counts.matrix.peaks) %in% colnames(seurat_object)])
+seurat_object[['peaks']] <- CreateAssayObject(counts = counts.matrix.peaks[,colnames(counts.matrix.peaks) %in% colnames(seurat_object)])
 seurat_object[['GA']]    <- CreateAssayObject(counts = gene.matrix[,colnames(gene.matrix) %in% colnames(seurat_object)])
 # seurat_object[['PA']]    <- CreateAssayObject(counts = promoter.matrix[,colnames(promoter.matrix) %in% colnames(seurat_object)])
 

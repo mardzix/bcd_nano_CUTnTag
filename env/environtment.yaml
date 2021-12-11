@@ -21,7 +21,7 @@ dependencies:
 
 # R packages
 # install.packages(c('argparse','ggplot2','funr','Signac','scales','Seurat','rmarkdown','mclust','GGally','BiocManager','patchwork','markdown','UpSetR','pheatmap','viridis','purrr','Rmagic','devtools'))
-# BiocManager::install(c('ensembldb','EnsDb.Mmusculus.v79','GenomeInfoDb', 'GenomicRanges', 'IRanges', 'Rsamtools','BiocGenerics','rtracklayer','limma'))
+# BiocManager::install(c('ensembldb','EnsDb.Mmusculus.v79','GenomeInfoDb', 'GenomicRanges', 'IRanges', 'Rsamtools','BiocGenerics','rtracklayer','limma','slingshot'))
 
 
 # Install monocle3 according to: https://cole-trapnell-lab.github.io/monocle3/docs/installation/

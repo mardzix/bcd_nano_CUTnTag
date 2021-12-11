@@ -1,0 +1,131 @@
+---
+title: "fraction_in_specific_peaks.Rmd"
+author: "Marek Bartosovic"
+date: "07/12/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r libraries}
+library(Seurat)
+library(Signac)
+library(argparse)
+library(rtracklayer)
+library(purrr)
+set.seed(1234)
+```
+
+```{r}
+
+
+
+fragments <- list('/data/proj/GCB_MB/bcd_CT/single-cell/results/nbiotech_data/fragments/H3K27ac_fragments.tsv.gz',
+                  '/data/proj/GCB_MB/bcd_CT/single-cell/results/nbiotech_data/fragments/H3K27me3_fragments.tsv.gz',
+                  '/data/proj/GCB_MB/bcd_CT/single-cell/results/single_modality/H3K27ac/fragments/fragments.tsv.gz',
+                  '/data/proj/GCB_MB/bcd_CT/single-cell/results/single_modality/H3K27me3/fragments/fragments.tsv.gz')
+
+seurat   <- list('/data/proj/GCB_MB/bcd_CT/single-cell/results/nbiotech_data/data/seurat/H3K27ac_seurat_object.Rds',
+                 '/data/proj/GCB_MB/bcd_CT/single-cell/results/nbiotech_data/data/seurat/H3K27me3_seurat_object.Rds',
+                 '/data/proj/GCB_MB/bcd_CT/single-cell/results/single_modality/H3K27ac/seurat_5000/Seurat_object_clustered_renamed.Rds',
+                 '/data/proj/GCB_MB/bcd_CT/single-cell/results/single_modality/H3K27me3/seurat_5000/Seurat_object_clustered_renamed.Rds')
+
+nms             <- c('single_H3K27ac','single_H3K27me3','multiple_H3K27ac','multiple_H3K27me3')
+
+names(fragments) <- nms
+names(seurat)    <- nms
+
+```
+
+```{r load_data}
+fragments.ls <- lapply(fragments,function(x){
+  rtracklayer::import(x,format='bed')
+})
+
+peak_modalities <- c("H3K27ac","H3K27me3","H3K27ac_shuffled","H3K27me3_shuffled")
+bed.ls       <- lapply(peak_modalities,function(x){
+  rtracklayer::import(paste0('/data/proj/GCB_MB/bcd_CT/single-cell/results/nbiotech_data/signal_matrix/top_peaks/peaks_',x,'_all_fragments.bed'))
+})
+names(bed.ls) <- peak_modalities
+
+seurat.ls <- lapply(seurat,readRDS)
+```
+
+```{r filter_cells_fragments}
+cells.ls  <- lapply(seurat.ls,colnames)
+cells.all <- unique(purrr::reduce(cells.ls,c))
+
+fragments.ls.valid <- lapply(fragments.ls,function(x){
+  x[x$name %in% cells.all]
+})
+```
+
+```{r count_overlaps_and_add_metadata}
+findOverlapsGR <- function(bed,fragments,cells){
+  op               <- findOverlaps(query = fragments,subject = bed)
+  op.query         <- unique(queryHits(op))
+  fragments.op     <- fragments[op.query]
+  cells.op         <- table(fragments.op$name)
+  cells.all        <- table(fragments$name)
+  
+  cells.not.in.op <- setdiff(union(names(cells.op),names(cells.all)),intersect(names(cells.op),names(cells.all)))
+  cells.op[cells.not.in.op] <- 0
+
+  return(cells.op/cells.all[names(cells.op)])
+}
+
+
+cells.stats <- list()
+
+for(p in names(bed.ls)){
+  print(p)
+  cells.stats[[p]] <- list()
+  for(f in names(fragments.ls.valid)){
+    print(f)
+    cells.stats[[p]][[f]] <- findOverlapsGR(bed = bed.ls[[p]],
+                                             fragments = fragments.ls.valid[[f]],
+                                             cells = cells.ls[[f]] 
+                                             )
+    seurat.ls[[f]] <- AddMetaData(object = seurat.ls[[f]], cells.stats[[p]][[f]],col.name = paste0(p,'_fraction'))
+  
+  }
+}
+
+```
+
+
+
+```{r plot1}
+df.to.plot.ls <- lapply(names(seurat.ls),function(x){
+  df <- data.frame('sample' = x,
+                   'cluster' = seurat.ls[[x]]@active.ident)
+  for(p in peak_modalities){
+    df[,paste0(p,'_fraction')] <- seurat.ls[[x]]@meta.data[,paste0(p,'_fraction')]
+  }
+  return(df)
+})
+
+    
+
+  
+df.to.plot <- purrr::reduce(df.to.plot.ls,rbind)
+
+library(ggplot2)
+ggplot(data=df.to.plot,aes(x=sample,y=H3K27ac_fraction)) + geom_boxplot(outlier.shape = NA) 
+ggplot(data=df.to.plot,aes(x=sample,y=H3K27me3_fraction)) + geom_boxplot(outlier.shape = NA) 
+
+ggplot(data=df.to.plot,aes(x=sample,y=H3K27ac_shuffled_fraction)) + geom_boxplot(outlier.shape = NA) 
+ggplot(data=df.to.plot,aes(x=sample,y=H3K27me3_shuffled_fraction)) + geom_boxplot(outlier.shape = NA) 
+
+```
+
+
+
+
+
+
+
+
+

@@ -59,7 +59,20 @@ rule run_macs_narrow:
         macs_outdir  = 'results/{sample}/{antibody}_{barcode}/peaks/macs_narrow/'
     shell:
         'macs2 callpeak -t {input.cellranger_bam} -g mm -f BAMPE -n {wildcards.antibody} '
-        '--outdir {params.macs_outdir} -q 0.05 -B --SPMR --keep-dup=1 2>&1 '
+        '--outdir {params.macs_outdir} --keep-dup=1 --llocal 100000 --cutoff-analysis --min-length 1000 --max-gap 1000  2>&1 '
+
+rule run_macs_narrow_test:
+    input:
+        cellranger_bam = 'results/cellranger/{sample}_{antibody}_{barcode}/outs/possorted_bam.bam'
+    output:
+        narrow_peaks = 'results/{sample}/{antibody}_{barcode}/peaks/macs_narrow_llocal_{llocal}/{antibody}_peaks.narrowPeak'
+    params:
+        macs_outdir  = 'results/{sample}/{antibody}_{barcode}/peaks/macs_narrow_llocal_{llocal}/'
+    shell:
+        'macs2 callpeak -t {input.cellranger_bam} -g mm -f BAMPE -n {wildcards.antibody} '
+        '--outdir {params.macs_outdir} --keep-dup=1 --llocal {wildcards.llocal} 2>&1 '
+
+
 
 rule run_macs_broad:
     input:
@@ -70,7 +83,7 @@ rule run_macs_broad:
         macs_outdir = 'results/{sample}/{antibody}_{barcode}/peaks/macs_broad/'
     shell:
         'macs2 callpeak -t {input} -g mm -f BAMPE -n {wildcards.antibody} '
-        '--outdir {params.macs_outdir} -q 0.05 -B --SPMR --keep-dup=1 --broad-cutoff=0.1 --broad 2>&1 '
+        '--outdir {params.macs_outdir} --llocal 100000 --keep-dup=1 --broad-cutoff=0.1 --broad 2>&1 '
 
 rule download_chromsizes:
     output:
@@ -115,7 +128,7 @@ rule add_barcode_fragments:
 rule barcode_overlap_peaks:
     input:
         bam    = 'results/cellranger/{sample}_{antibody}_{barcode}/outs/possorted_bam.bam',
-        peaks  = 'results/{sample}/{antibody}_{barcode}/peaks/SEACR/peaks.relaxed.bed',
+        peaks  = 'results/{sample}/{antibody}_{barcode}/peaks/macs_narrow/{antibody}_peaks.narrowPeak',
     output:
         overlap = 'results/{sample}/{antibody}_{barcode}/barcode_metrics/peaks_barcodes.txt'
     params:
@@ -146,7 +159,7 @@ rule cell_selection:
     input:
         bcd_all   = 'results/{sample}/{antibody}_{barcode}/barcode_metrics/all_barcodes.txt',
         bcd_peak  = 'results/{sample}/{antibody}_{barcode}/barcode_metrics/peaks_barcodes.txt',
-        peaks     = 'results/{sample}/{antibody}_{barcode}/peaks/SEACR/peaks.relaxed.bed',
+        peaks     = 'results/{sample}/{antibody}_{barcode}/peaks/macs_narrow/{antibody}_peaks.narrowPeak',
         metadata  = 'results/cellranger/{sample}_{antibody}_{barcode}/outs/singlecell.csv',
         fragments = 'results/{sample}/{antibody}_{barcode}/fragments/fragments.tsv.gz',
     output:
@@ -164,7 +177,7 @@ rule cell_selection:
 rule create_seurat_object:
     input:
         fragments = 'results/{sample}/{antibody}_{barcode}/fragments/fragments.tsv.gz',
-        peaks     = 'results/{sample}/{antibody}_{barcode}/peaks/SEACR/peaks.relaxed.bed',
+        peaks     = 'results/{sample}/{antibody}_{barcode}/peaks/macs_narrow/{antibody}_peaks.narrowPeak',
         metadata  = 'results/{sample}/{antibody}_{barcode}/cell_picking/metadata.csv',
     output:
         'results/{sample}/{antibody}_{barcode}/seurat/bin_{binwidth}/Seurat_object.Rds',

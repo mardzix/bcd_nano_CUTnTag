@@ -56,7 +56,8 @@ rule all_demultiplex:
         expand('results/single_modality/{modality}/seurat_{binwidth}/Seurat_object_clustered.Rds',modality=antibodies_list,binwidth=binsize),               # Cluster
         expand('results/single_modality/{modality}/seurat_{binwidth}/Seurat_object_clustered_renamed.Rds', modality=antibodies_list, binwidth=binsize),     # Rename
         expand('results/single_modality/{modality}/seurat_{binwidth}/integration/integration_RNA.Rds', modality=antibodies_list, binwidth=binsize),         # Integration with scRNA-seq
-        expand('results/single_modality/{modality}/seurat_{binwidth}/markers.csv', modality = antibodies_list, binwidth = binsize),                        # Find markers
+        expand('results/single_modality/{modality}/seurat_{binwidth}/markers.csv', modality = antibodies_list, binwidth = binsize),                         # Find markers
+        expand('results/single_modality/{modality}/fragments/fragments.bw', modality = antibodies_list),                                                # BigWig for all clusters
 
         ################################
         # Multiple modalities analysis #
@@ -64,6 +65,8 @@ rule all_demultiplex:
         [expand('results/multiple_modalities/{combination}/seurat_{binwidth}/Seurat_object.Rds', combination = "_".join(combination), binwidth=binsize) for combination in modalities_combinations],
         [expand('results/multiple_modalities/{combination}/seurat_{binwidth}/Seurat_object_clustered.Rds', combination = "_".join(combination), binwidth=binsize) for combination in modalities_combinations],
         [expand('results/multiple_modalities/{combination}/seurat_{binwidth}/integration/integration_RNA.Rds',combination="_".join(combination),binwidth=binsize) for combination in modalities_combinations],
+        [expand('results/multiple_modalities/{combination}/fragments_merged_for_QC/fragments.tsv.gz', combination="_".join(combination)) for combination in modalities_combinations],
+
 
         # Fragments file
         expand('results/single_modality/{modality}/fragments/fragments.tsv.gz', modality = antibodies_list),  # Merge
@@ -143,6 +146,32 @@ rule merge_fragments_per_single_modality:
         tmpdir    = config['general']['tempdir']
     shell:
         "zcat {input.fragments} | sort -k1,1 -k2,2n -T {params.tmpdir} | bgzip > {output.fragments}; tabix -p bed {output.fragments}"
+
+rule merge_fragments_various_modalities:
+    input:
+        fragments = lambda wildcards:  expand('results/single_modality/{modality}/fragments/fragments.tsv.gz', modality = wildcards.combinations.split("_"))
+    output:
+        fragments = 'results/multiple_modalities/{combinations}/fragments_merged_for_QC/fragments.tsv.gz'
+    params:
+        tmpdir = config['general']['tempdir']
+    shell:
+        "zcat {input.fragments} | sort -k1,1 -k2,2n -T {params.tmpdir} | bgzip > {output.fragments}; tabix -p bed {output.fragments}"
+
+rule fragments_to_bw:
+    input:
+        fragments   = 'results/single_modality/{modality}/fragments/fragments.tsv.gz',
+        chrom_sizes = 'results/mm10.chrom.sizes'
+    output:
+        bam        = temp('results/single_modality/{modality}/fragments/fragments.bam'),
+        bam_sorted = temp('results/single_modality/{modality}/fragments/fragments_sorted.bam'),
+        index      = temp('results/single_modality/{modality}/fragments/fragments_sorted.bam.bai'),
+        bigwig     = 'results/single_modality/{modality}/fragments/fragments.bw',
+    threads: 8
+    shell:
+        "bedToBam -i {input.fragments} -g {input.chrom_sizes} > {output.bam} && "
+        "samtools sort -@ {threads} -o {output.bam_sorted} {output.bam} &&"
+        "samtools index {output.bam_sorted} && "
+        "bamCoverage -b {output.bam_sorted} -o {output.bigwig} -p {threads} --minMappingQuality 5 --binSize 50 --smoothLength 250 --normalizeUsing RPKM --ignoreDuplicates"
 
 rule export_bw:
     input:
