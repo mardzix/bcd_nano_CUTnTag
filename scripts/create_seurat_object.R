@@ -7,7 +7,7 @@ library(funr)
 
 
 source(paste0(dirname(funr::sys.script()),"/func.R"))
-ndim = 40
+# ndim = 40
 
 ###############################
 parser <- ArgumentParser()
@@ -35,6 +35,9 @@ parser$add_argument("--genome_version", type="character",
 
 parser$add_argument("-w", "--window", type="integer", default="10000", 
                     help="width of a window")
+parser$add_argument("-n", "--ndim", type="integer", default="30", 
+                    help="number of LSI dimensions to use for initial clustering")
+
 
 args <- parser$parse_args()
 
@@ -141,45 +144,55 @@ saveRDS(object = seurat_object,file = paste0(args$out_prefix,'Seurat_object.Rds'
 ########################## Try Clustering using Seurat
 cat("*** Clustering and dimensionality reduction \n")
 
-DefaultAssay(seurat_object) <- paste0('bins_',args$window)
 
 # The dimensionality reduction might fail, especially for low complexity datasets, so put the code into try to still save the objects
-try({
-seurat_object <- RunTFIDF(seurat_object)
-seurat_object <- FindTopFeatures(seurat_object,min.cutoff = 'q0')
-seurat_object <- RunSVD(
-  seurat_object,
-  reduction.key = 'LSI_',
-  reduction.name = 'lsi'
-  )
+
+# Get assays and reorder
+assays_all <- names(seurat_object@assays)
+assays_all <- assays_all[order(c(grepl('bins',assays_all)))]
 
 
-seurat_object <- RunUMAP(seurat_object, dims = 2:ndim, reduction = 'lsi')
-
-seurat_object <- FindNeighbors(
-  object = seurat_object,
-  reduction = 'lsi',
-  dims = 2:ndim
-)
-
-
-seurat_object <- FindClusters(
-  object = seurat_object,
-  verbose = TRUE
-)
-
-
-p1 <- DimPlot(seurat_object,group.by = 'ident')
-p2 <- FeaturePlot(seurat_object,'blacklist_region_fragments')
-p3 <- FeaturePlot(seurat_object,'logUMI')
-
-
-
-ggsave(plot= p1 + p2 + p3,
-       filename = paste0(args$out_prefix,'Seurat_clustering.png'),
-       width=15,height=5)
-})
-
+for(assay in assays_all) {
+  try({
+    cat("*** Clustering on assay ",assay," \n")
+    DefaultAssay(seurat_object) <- assay
+    seurat_object <- RunTFIDF(seurat_object)
+    seurat_object <- FindTopFeatures(seurat_object,min.cutoff = 'q0')
+    seurat_object <- RunSVD(
+      seurat_object,
+      reduction.key = 'LSI_',
+      reduction.name = 'lsi',
+      assay = assay
+      )
+    
+    
+    seurat_object <- RunUMAP(seurat_object, dims = 2:args$ndim, reduction = 'lsi',assay = assay)
+    
+    seurat_object <- FindNeighbors(
+      object = seurat_object,
+      reduction = 'lsi',
+      dims = 2:args$ndim,
+      assay = assay
+    )
+    
+    
+    seurat_object <- FindClusters(
+      object = seurat_object,
+      verbose = TRUE,
+      assay=assay
+    )
+    
+    
+    p1 <- DimPlot(seurat_object,group.by = 'ident',label=TRUE) + NoLegend()
+    p2 <- FeaturePlot(seurat_object,'logUMI')
+    
+    
+    
+    ggsave(plot= p1 + p2,
+           filename = paste0(args$out_prefix,'Seurat_clustering_',assay,'.png'),
+           width=10,height=5)
+    })
+}
 
 ######### Save the final object
 cat("*** Save the object \n")

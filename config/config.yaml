@@ -31,26 +31,25 @@ nbiotech_data:
     bigwig: https://ftp.ncbi.nlm.nih.gov/geo/series/GSE157nnn/GSE157637/suppl/GSE157637_bigwig.tar.gz
     fragments: https://ftp.ncbi.nlm.nih.gov/geo/series/GSE157nnn/GSE157637/suppl/GSE157637_modified_fragments_file_cellranger.tar.gz
     seurat: https://ftp.ncbi.nlm.nih.gov/geo/series/GSE157nnn/GSE157637/suppl/GSE157637_Seurat_v3_object.tar.gz
-  fastq:
-    samples:
-      H3K27ac_N1:
-        SRR12607042
-        SRR12607043
-      H3K27ac_N2:
-        SRR12607044
-        SRR12607045
-      H3K27me3_N1:
-        SRR12607034
-        SRR12607035
-      H3K27me3_N2:
-        SRR12607036
-        SRR12607037
-      H3K27me3_N3:
-        SRR12607038
-        SRR12607039
-      H3K27me3_N4:
-        SRR12607040
-        SRR12607041
+  samples:
+    H3K27ac_N1:
+      SRR12607042
+      SRR12607043
+    H3K27ac_N2:
+      SRR12607044
+      SRR12607045
+    H3K27me3_N1:
+      SRR12607034
+      SRR12607035
+    H3K27me3_N2:
+      SRR12607036
+      SRR12607037
+    H3K27me3_N3:
+      SRR12607038
+      SRR12607039
+    H3K27me3_N4:
+      SRR12607040
+      SRR12607041
 
 
 

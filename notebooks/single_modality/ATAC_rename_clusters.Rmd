@@ -7,7 +7,11 @@ params:
   out_prefix: "/data/proj/GCB_MB/bcd_CT/single-cell/results/"
   modality: "ATAC"
   binsize: 5000
+  assay_to_cluster: "peaks"
 ---
+
+# This markdown is for final tweaks in the clustering and also renaming the cluster identities 
+# This is really hard to do automatically, so there is a set of notebooks that will do this for each modality separately
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -18,11 +22,53 @@ knitr::opts_chunk$set(echo = TRUE)
 library(Seurat)
 library(Signac)
 library(ggplot2)
+set.seed(1234)
 ```
 
 ```{r load_data}
 seurat <- readRDS(file=paste0(params$out_prefix,'/single_modality/',params$modality,'/seurat_',params$binsize,'/Seurat_object_clustered.Rds'))
+DimPlot(seurat)
 ```
+
+```{r recluster_final}
+  DefaultAssay(seurat_object) <- assay
+  modality <- unique(seurat_object$modality)
+  
+  seurat_object <- RunTFIDF(seurat_object)
+  seurat_object <- FindTopFeatures(seurat_object)
+  
+  seurat_object <- RunSVD(
+    object = seurat_object,
+    assay = assay,
+    reduction.name = 'lsi'
+  )
+  
+  p.depthcor <- DepthCor(seurat_object)
+  ggsave(filename = paste0(dirname(output),'/',modality,'_',assay,'_depthcor.png'),width=4,height=4)
+  
+  dims          <- c(2:ndim)
+  
+  seurat_object <- RunUMAP(
+    object = seurat_object,
+    reduction = 'lsi',
+    dims = dims
+  )
+  
+  seurat_object <- FindNeighbors(
+    object = seurat_object,
+    reduction = 'lsi',
+    dims = dims
+  )
+  
+  seurat_object <- FindClusters(
+    object = seurat_object,
+    algorithm = 3,
+    #      resolution = 0.2,
+    verbose = FALSE
+  )
+
+```
+
 
 
 ```{r,fig.width=6,fig.height=6}

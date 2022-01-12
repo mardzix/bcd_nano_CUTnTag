@@ -72,8 +72,6 @@ rule run_macs_narrow_test:
         'macs2 callpeak -t {input.cellranger_bam} -g mm -f BAMPE -n {wildcards.antibody} '
         '--outdir {params.macs_outdir} --keep-dup=1 --llocal {wildcards.llocal} 2>&1 '
 
-
-
 rule run_macs_broad:
     input:
         cellranger_bam = 'results/cellranger/{sample}_{antibody}_{barcode}/outs/possorted_bam.bam'
@@ -83,7 +81,8 @@ rule run_macs_broad:
         macs_outdir = 'results/{sample}/{antibody}_{barcode}/peaks/macs_broad/'
     shell:
         'macs2 callpeak -t {input} -g mm -f BAMPE -n {wildcards.antibody} '
-        '--outdir {params.macs_outdir} --llocal 100000 --keep-dup=1 --broad-cutoff=0.1 --broad 2>&1 '
+        '--outdir {params.macs_outdir} --llocal 100000 --keep-dup=1 --broad-cutoff=0.1 ' 
+        '--min-length 1000 --max-gap 1000 --broad 2>&1 '
 
 rule download_chromsizes:
     output:
@@ -124,11 +123,10 @@ rule add_barcode_fragments:
         'python3 {params.script} {input.fragments} {wildcards.sample} | bgzip > {output.fragments}; '
         'tabix -p bed {output.fragments}'
 
-
 rule barcode_overlap_peaks:
     input:
         bam    = 'results/cellranger/{sample}_{antibody}_{barcode}/outs/possorted_bam.bam',
-        peaks  = 'results/{sample}/{antibody}_{barcode}/peaks/macs_narrow/{antibody}_peaks.narrowPeak',
+        peaks  = 'results/{sample}/{antibody}_{barcode}/peaks/macs_broad/{antibody}_peaks.broadPeak',
     output:
         overlap = 'results/{sample}/{antibody}_{barcode}/barcode_metrics/peaks_barcodes.txt'
     params:
@@ -159,7 +157,7 @@ rule cell_selection:
     input:
         bcd_all   = 'results/{sample}/{antibody}_{barcode}/barcode_metrics/all_barcodes.txt',
         bcd_peak  = 'results/{sample}/{antibody}_{barcode}/barcode_metrics/peaks_barcodes.txt',
-        peaks     = 'results/{sample}/{antibody}_{barcode}/peaks/macs_narrow/{antibody}_peaks.narrowPeak',
+        peaks     = 'results/{sample}/{antibody}_{barcode}/peaks/macs_broad/{antibody}_peaks.broadPeak',
         metadata  = 'results/cellranger/{sample}_{antibody}_{barcode}/outs/singlecell.csv',
         fragments = 'results/{sample}/{antibody}_{barcode}/fragments/fragments.tsv.gz',
     output:
@@ -177,14 +175,14 @@ rule cell_selection:
 rule create_seurat_object:
     input:
         fragments = 'results/{sample}/{antibody}_{barcode}/fragments/fragments.tsv.gz',
-        peaks     = 'results/{sample}/{antibody}_{barcode}/peaks/macs_narrow/{antibody}_peaks.narrowPeak',
+        peaks     = 'results/{sample}/{antibody}_{barcode}/peaks/macs_broad/{antibody}_peaks.broadPeak',
         metadata  = 'results/{sample}/{antibody}_{barcode}/cell_picking/metadata.csv',
+        script    = os.path.dirname(workflow.basedir) + '/scripts/create_seurat_object.R',
     output:
         'results/{sample}/{antibody}_{barcode}/seurat/bin_{binwidth}/Seurat_object.Rds',
     params:
-        script      = os.path.dirname(workflow.basedir) + '/scripts/create_seurat_object.R',
         out_prefix  = 'results/{sample}/{antibody}_{barcode}/seurat/bin_{binwidth}/',
         genome      = config['general']['genome'],
     shell:
-        "Rscript {params.script} --sample {wildcards.sample}   --antibody {wildcards.antibody} --metadata {input.metadata}   --fragments {input.fragments} --peaks {input.peaks} --out_prefix {params.out_prefix} --window {wildcards.binwidth} --genome_version {params.genome}"
+        "Rscript {input.script} --sample {wildcards.sample}   --antibody {wildcards.antibody} --metadata {input.metadata}   --fragments {input.fragments} --peaks {input.peaks} --out_prefix {params.out_prefix} --window {wildcards.binwidth} --genome_version {params.genome}"
 

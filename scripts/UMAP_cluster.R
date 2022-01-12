@@ -22,14 +22,14 @@ args <- parser$parse_args()
 
 ######################## End arguments parser
 # args <- list()
-# ##args$input <- c("results/single_modality/H3K27me3/seurat_5000/Seurat_object.Rds")
-# args$input <- c("results/multiple_modalities/ATAC_H3K27mer/seurat_5000/Seurat_object.Rds")
+# args$input <- c("results/single_modality/H3K27me3/seurat_5000/Seurat_object.Rds")
+# # args$input <- c("results/multiple_modalities/ATAC_H3K27me3/seurat_5000/Seurat_object.Rds")
 # args$assay <- 'bins_5000'
 # args$ndim <- 50
 # args$output <- "/data/proj/GCB_MB/bcd_CT/single-cell/data.Rds"
 
-UMAP_and_cluster <- function(seurat_object){
-  DefaultAssay(seurat_object) <- args$assay
+UMAP_and_cluster <- function(seurat_object, assay, ndim = 50, output = 'seurat_object.Rds'){
+  DefaultAssay(seurat_object) <- assay
   modality <- unique(seurat_object$modality)
   
   seurat_object <- RunTFIDF(seurat_object)
@@ -37,14 +37,14 @@ UMAP_and_cluster <- function(seurat_object){
   
   seurat_object <- RunSVD(
     object = seurat_object,
-    assay = args$assay,
+    assay = assay,
     reduction.name = 'lsi'
   )
   
   p.depthcor <- DepthCor(seurat_object)
-  ggsave(filename = paste0(dirname(args$output),'/',modality,'_',args$assay,'_depthcor.png'),width=4,height=4)
+  ggsave(filename = paste0(dirname(output),'/',modality,'_',assay,'_depthcor.png'),width=4,height=4)
   
-  dims          <- c(2:args$ndim)
+  dims          <- c(2:ndim)
   
   seurat_object <- RunUMAP(
     object = seurat_object,
@@ -70,7 +70,7 @@ UMAP_and_cluster <- function(seurat_object){
   p1 <- DimPlot(seurat_object,label=TRUE)
   p2 <- DimPlot(seurat_object,group.by='sample',label=TRUE) + theme(legend.position = 'bottom') + ggtitle(unique(seurat_object$modality))
   ggsave(plot = p1+p2,
-         filename =  paste0(dirname(args$output),'/',modality,'_',args$assay,'_UMAP.png'),width = 8,height = 4)
+         filename =  paste0(dirname(output),'/',modality,'_',assay,'_UMAP.png'),width = 8,height = 4)
   return(seurat_object)
  
 }
@@ -80,12 +80,18 @@ seurat.ls <- readRDS(args$input)
 
 # If single modality
 if(length(seurat.ls) ==1){
-  seurat.ls <- UMAP_and_cluster(seurat.ls)
+  seurat.ls <- UMAP_and_cluster(seurat_object = seurat.ls,
+                                assay = args$assay,
+                                ndim = args$ndim,
+                                output = args$output)
   }
 
 # If multiple modalities
 if(length(seurat.ls) > 1){
-  seurat.ls[[args$modality]] <- UMAP_and_cluster(seurat.ls[[args$modality]])
+  seurat.ls[[args$modality]] <- UMAP_and_cluster(seurat_object = seurat.ls[[args$modality]],
+                                                 assay = args$assay,
+                                                 ndim = args$ndim,
+                                                 output = args$output)
 }
 
 # Save

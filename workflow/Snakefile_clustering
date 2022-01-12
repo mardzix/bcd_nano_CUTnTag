@@ -98,7 +98,7 @@ rule cluster:
     shell:
         "Rscript {input.script} -i {input.seurat} -o {output}"
 
-rule rename_clusters:
+rule cluster_final:
     input:
         seurat   = 'results/single_modality/{modality}/seurat_{binwidth}/Seurat_object_clustered.Rds',
         notebook =  os.path.dirname(workflow.basedir) + '/notebooks/single_modality/{modality}_rename_clusters.Rmd',
