@@ -16,6 +16,9 @@ parser$add_argument("-i", "--input", type="character", default='foo',
                     help="seurat object")
 parser$add_argument("-o", "--output_file", type="character", default='foo',
                     help="output folder")
+parser$add_argument("-d", "--idents", type="character", default='active.ident',
+                    help="identities to use for markers")
+
 args <- parser$parse_args()
 
 ###################
@@ -23,6 +26,14 @@ args <- parser$parse_args()
 cat("*** Loading seurat object \n")
 seurat <- readRDS(args$input)
 # seurat <- readRDS(file='/data/proj/GCB_MB/bcd_CT/single-cell/results/single_modality/ATAC/seurat_5000/Seurat_object_clustered_renamed.Rds')
+
+
+if(args$idents != 'active.ident'){
+  seurat <- SetIdent(object = seurat,cells = names(seurat@meta.data[,args$idents]),value = seurat@meta.data[,args$idents])
+  }
+
+
+
 
 cat("*** Finding markers \n")
 markers <- FindAllMarkers(seurat)
@@ -33,3 +44,5 @@ markers.positive <- markers[markers$avg_log2FC > 0,  ]
 cat("*** Export markers as csv \n")
 write.csv(x = markers,file = args$output_file)
 write.csv(x = markers,file = gsub(pattern = '\\.csv','_positive.csv',args$output_file))
+
+

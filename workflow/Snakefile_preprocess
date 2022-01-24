@@ -1,44 +1,50 @@
-configfile: workflow.basedir + '/../config/config.yaml'
+include: 'Snakefile_prep'
 
-samples_list  = list(config['samples'].keys())
-# ['bcdCT_MB21_02', 'bcdCT_MB21_03']
-
-barcodes_dict = {sample: config['samples'][sample]['barcodes'] for sample in samples_list}
-# {'bcdCT_MB21_02': {'ATAC': 'TATAGCCT', 'H3K27ac': 'ATAGAGGC', 'H3K27me3': 'CCTATCCT'}, 'bcdCT_MB21_03': {'H3K27ac': 'ATAGAGGC', 'H3K27me3': 'CCTATCCT'}}
-
-
-shell.executable("/bin/bash")
-shell.prefix("source ~/.bash_profile; conda activate " + config['general']['conda_env']  + " ; ")
-
-rule all_cellranger:
+rule all_preprocess:
     input:
-        cellranger    = ['results/cellranger/{sample}_{antibody}_{barcode}/outs/possorted_bam.bam'.format(sample = sample, antibody = antibody, barcode = barcodes_dict[sample][antibody]) for sample in samples_list  for antibody in barcodes_dict[sample].keys()],
-        bigwig_all    = ['results/{sample}/{antibody}_{barcode}/bigwig/all_reads.bw'.format(sample = sample, antibody = antibody, barcode = barcodes_dict[sample][antibody]) for sample in samples_list  for antibody in barcodes_dict[sample].keys()],
-        macs_narrow   = ['results/{sample}/{antibody}_{barcode}/peaks/macs_narrow/{antibody}_peaks.narrowPeak'.format(sample = sample, antibody = antibody, barcode = barcodes_dict[sample][antibody]) for sample in samples_list  for antibody in barcodes_dict[sample].keys()],
-        macs_broad    = ['results/{sample}/{antibody}_{barcode}/peaks/macs_broad/{antibody}_peaks.broadPeak'.format(sample = sample, antibody = antibody, barcode = barcodes_dict[sample][antibody]) for sample in samples_list  for antibody in barcodes_dict[sample].keys()],
-        chrom_sizes   = 'results/mm10.chrom.sizes',
-        SEACR_peaks   = ['results/{sample}/{antibody}_{barcode}/peaks/SEACR/peaks.relaxed.bed'.format(sample = sample, antibody = antibody, barcode = barcodes_dict[sample][antibody]) for sample in samples_list  for antibody in barcodes_dict[sample].keys()],
-        fragments     = ['results/{sample}/{antibody}_{barcode}/fragments/fragments.tsv.gz'.format(sample = sample, antibody = antibody, barcode = barcodes_dict[sample][antibody]) for sample in samples_list  for antibody in barcodes_dict[sample].keys()],
-        peaks_overlap = ['results/{sample}/{antibody}_{barcode}/barcode_metrics/peaks_barcodes.txt'.format(sample = sample, antibody = antibody, barcode = barcodes_dict[sample][antibody]) for sample in samples_list  for antibody in barcodes_dict[sample].keys()],
-        barcodes_sum  = ['results/{sample}/{antibody}_{barcode}/barcode_metrics/all_barcodes.txt'.format(sample = sample, antibody = antibody, barcode = barcodes_dict[sample][antibody]) for sample in samples_list  for antibody in barcodes_dict[sample].keys()],
-        cell_pick     = ['results/{sample}/{antibody}_{barcode}/cell_picking/metadata.csv'.format(sample = sample, antibody = antibody, barcode = barcodes_dict[sample][antibody]) for sample in samples_list  for antibody in barcodes_dict[sample].keys()],
-        seurat        = ['results/{sample}/{antibody}_{barcode}/seurat/bin_{binwidth}/Seurat_object.Rds'.format(sample = sample, antibody = antibody, barcode = barcodes_dict[sample][antibody],binwidth = binwidth) for sample in samples_list  for antibody in barcodes_dict[sample].keys() for binwidth in config['general']['binwidth']],
+        cellranger          = ['results/cellranger/{sample}_{antibody}_{barcode}/outs/possorted_bam.bam'.format(sample = sample, antibody = antibody, barcode = barcodes_dict[sample][antibody]) for sample in samples_list  for antibody in barcodes_dict[sample].keys()],
+        bigwig_all          = ['results/{sample}/{antibody}_{barcode}/bigwig/all_reads.bw'.format(sample = sample, antibody = antibody, barcode = barcodes_dict[sample][antibody]) for sample in samples_list  for antibody in barcodes_dict[sample].keys()],
+        macs_narrow         = ['results/{sample}/{antibody}_{barcode}/peaks/macs_narrow/{antibody}_peaks.narrowPeak'.format(sample = sample, antibody = antibody, barcode = barcodes_dict[sample][antibody]) for sample in samples_list  for antibody in barcodes_dict[sample].keys()],
+        macs_broad          = ['results/{sample}/{antibody}_{barcode}/peaks/macs_broad/{antibody}_peaks.broadPeak'.format(sample = sample, antibody = antibody, barcode = barcodes_dict[sample][antibody]) for sample in samples_list  for antibody in barcodes_dict[sample].keys()],
+        chrom_sizes         = 'results/mm10.chrom.sizes',
+        SEACR_peaks         = ['results/{sample}/{antibody}_{barcode}/peaks/SEACR/peaks.relaxed.bed'.format(sample = sample, antibody = antibody, barcode = barcodes_dict[sample][antibody]) for sample in samples_list  for antibody in barcodes_dict[sample].keys()],
+        fragments           = ['results/{sample}/{antibody}_{barcode}/fragments/fragments.tsv.gz'.format(sample = sample, antibody = antibody, barcode = barcodes_dict[sample][antibody]) for sample in samples_list  for antibody in barcodes_dict[sample].keys()],
+        peaks_overlap       = ['results/{sample}/{antibody}_{barcode}/barcode_metrics/peaks_barcodes.txt'.format(sample = sample, antibody = antibody, barcode = barcodes_dict[sample][antibody]) for sample in samples_list  for antibody in barcodes_dict[sample].keys()],
+        barcodes_sum        = ['results/{sample}/{antibody}_{barcode}/barcode_metrics/all_barcodes.txt'.format(sample = sample, antibody = antibody, barcode = barcodes_dict[sample][antibody]) for sample in samples_list  for antibody in barcodes_dict[sample].keys()],
+        cell_pick           = ['results/{sample}/{antibody}_{barcode}/cell_picking/metadata.csv'.format(sample = sample, antibody = antibody, barcode = barcodes_dict[sample][antibody]) for sample in samples_list  for antibody in barcodes_dict[sample].keys()],
+        seurat              = ['results/{sample}/{antibody}_{barcode}/seurat/bin_{binwidth}/Seurat_object.Rds'.format(sample = sample, antibody = antibody, barcode = barcodes_dict[sample][antibody],binwidth = binwidth) for sample in samples_list for antibody in barcodes_dict[sample].keys() for binwidth in config['general']['binwidth']],
+        seurat_peaks        = ['results/{sample}/{antibody}_{barcode}/seurat/peaks/Seurat_object.Rds'.format(sample = sample, antibody = antibody, barcode = barcodes_dict[sample][antibody]) for sample in samples_list for antibody in barcodes_dict[sample].keys()],
 
+rule demultiplex:
+    input:
+        script = workflow_dir + '/scripts/debarcode.py',
+        fastq  = lambda wildcards: glob.glob(config['samples'][wildcards.sample]['fastq_path'] + '/**/*{lane}*R[123]*.fastq.gz'.format(lane=wildcards.lane),recursive=True)
+    output:
+        'results/fastq_per_barcode/{sample}/{antibody}_{barcode}/barcode_{barcode}/{id}_{number}_{lane}_R1_{suffix}',
+        'results/fastq_per_barcode/{sample}/{antibody}_{barcode}/barcode_{barcode}/{id}_{number}_{lane}_R2_{suffix}',
+        'results/fastq_per_barcode/{sample}/{antibody}_{barcode}/barcode_{barcode}/{id}_{number}_{lane}_R3_{suffix}',
+    params:
+        nbarcodes  = lambda wildcards: len(config['samples'][wildcards.sample]['barcodes']),
+        out_folder = lambda wildcards: 'results/fastq_per_barcode/{sample}/{antibody}_{barcode}/'.format(sample=wildcards.sample, antibody=wildcards.antibody,barcode=wildcards.barcode),
+    shell:
+        "python3 {input.script} -i {input.fastq} -o {params.out_folder} --single_cell --barcode {wildcards.barcode} 2>&1"
 
 rule run_cellranger:
     input:
-        lambda wildcards: '{0}/barcode_{1}/'.format(config['samples'][wildcards.sample]['fastq_path'],wildcards.barcode)
+        # Uses non-demultiplexed fastq files to figure out the seq id
+        lambda wildcards: get_fastq_for_cellranger(config['samples'][wildcards.sample]['fastq_path'],sample=wildcards.sample,antibody=wildcards.antibody,barcode=wildcards.barcode)
     output:
         bam  = 'results/cellranger/{sample}_{antibody}_{barcode}/outs/possorted_bam.bam',
         frag = 'results/cellranger/{sample}_{antibody}_{barcode}/outs/fragments.tsv.gz',
         meta = 'results/cellranger/{sample}_{antibody}_{barcode}/outs/singlecell.csv',
     params:
-        cellranger_ref = '/data/ref/cellranger-atac/refdata-cellranger-atac-mm10-2020-A-2.0.0/'
+        cellranger_ref = config['general']['cellranger_ref'],
+        fastq_folder   = lambda wildcards: os.getcwd() + '/results/fastq_per_barcode/{sample}/{antibody}_{barcode}/barcode_{barcode}/'.format(sample=wildcards.sample, antibody=wildcards.antibody, barcode=wildcards.barcode)
     threads: 40
     shell:
         'rm -r results/cellranger/{wildcards.sample}_{wildcards.antibody}_{wildcards.barcode}/; '
         'cd results/cellranger/; '
-        '/data/bin/cellranger-atac count --id {wildcards.sample}_{wildcards.antibody}_{wildcards.barcode} --reference {params.cellranger_ref} --fastqs {input}'
+        '/data/bin/cellranger-atac count --id {wildcards.sample}_{wildcards.antibody}_{wildcards.barcode} --reference {params.cellranger_ref} --fastqs {params.fastq_folder}'
 
 rule bam_to_bw:
     input:
@@ -84,13 +90,13 @@ rule run_macs_broad:
         '--outdir {params.macs_outdir} --llocal 100000 --keep-dup=1 --broad-cutoff=0.1 ' 
         '--min-length 1000 --max-gap 1000 --broad 2>&1 '
 
-rule download_chromsizes:
+rule get_chromsizes:
     output:
         'results/mm10.chrom.sizes'
     params:
-        url="http://hgdownload.cse.ucsc.edu/goldenpath/mm10/bigZips/mm10.chrom.sizes"
+        faidx = config['general']['cellranger_ref'] + '/fasta/genome.fa.fai' # Assuming fasta index is in /fasta/genome.fa.fai, change if neccessary
     shell:
-        "wget -O {output} {params.url}"
+        'cut -f1,2 {params.faidx} > {output}'
 
 rule prep_SEACR_files:
     input:
@@ -118,7 +124,7 @@ rule add_barcode_fragments:
         fragments = 'results/{sample}/{antibody}_{barcode}/fragments/fragments.tsv.gz',
         index     = 'results/{sample}/{antibody}_{barcode}/fragments/fragments.tsv.gz.tbi',
     params:
-        script    = os.path.dirname(workflow.basedir) + '/scripts/add_sample_to_fragments.py',
+        script    = workflow_dir + '/scripts/add_sample_to_fragments.py',
     shell:
         'python3 {params.script} {input.fragments} {wildcards.sample} | bgzip > {output.fragments}; '
         'tabix -p bed {output.fragments}'
@@ -130,8 +136,8 @@ rule barcode_overlap_peaks:
     output:
         overlap = 'results/{sample}/{antibody}_{barcode}/barcode_metrics/peaks_barcodes.txt'
     params:
-        get_cell_barcode     = os.path.dirname(workflow.basedir) + '/scripts/get_cell_barcode.awk',
-        add_sample_to_list   = os.path.dirname(workflow.basedir) + '/scripts/add_sample_to_list.py',
+        get_cell_barcode     = workflow_dir + '/scripts/get_cell_barcode.awk',
+        add_sample_to_list   = workflow_dir + '/scripts/add_sample_to_list.py',
         tmpdir               = config['general']['tempdir']
     shell:
         'bedtools intersect -abam {input.bam} -b {input.peaks} -u | samtools view -f2 | '
@@ -144,8 +150,8 @@ rule barcode_metrics_all:
   output:
     all_bcd    = 'results/{sample}/{antibody}_{barcode}/barcode_metrics/all_barcodes.txt'
   params:
-      get_cell_barcode   = os.path.dirname(workflow.basedir) + '/scripts/get_cell_barcode.awk',
-      add_sample_to_list = os.path.dirname(workflow.basedir) + '/scripts/add_sample_to_list.py',
+      get_cell_barcode   = workflow_dir + '/scripts/get_cell_barcode.awk',
+      add_sample_to_list = workflow_dir + '/scripts/add_sample_to_list.py',
       tmpdir             = config['general']['tempdir']
   shell:
     ' samtools view -f2 {input.bam}| '
@@ -167,22 +173,38 @@ rule cell_selection:
         'results/{sample}/{antibody}_{barcode}/cell_picking/cells_not_picked.bw',
         'results/{sample}/{antibody}_{barcode}/cell_picking/metadata.csv',
     params:
-        script      = os.path.dirname(workflow.basedir) + '/scripts/pick_cells.R',
+        script      = workflow_dir + '/scripts/pick_cells.R',
         out_prefix  = 'results/{sample}/{antibody}_{barcode}/cell_picking/',
     shell:
         "Rscript {params.script} --metadata {input.metadata} --fragments {input.fragments} --bcd_all {input.bcd_all} --bcd_peak {input.bcd_peak} --antibody {wildcards.antibody} --sample {wildcards.sample} --out_prefix {params.out_prefix}"
 
-rule create_seurat_object:
+rule create_seurat_object_bins:
     input:
         fragments = 'results/{sample}/{antibody}_{barcode}/fragments/fragments.tsv.gz',
-        peaks     = 'results/{sample}/{antibody}_{barcode}/peaks/macs_broad/{antibody}_peaks.broadPeak',
         metadata  = 'results/{sample}/{antibody}_{barcode}/cell_picking/metadata.csv',
-        script    = os.path.dirname(workflow.basedir) + '/scripts/create_seurat_object.R',
+        script    = workflow_dir + '/scripts/create_seurat_object.R',
     output:
         'results/{sample}/{antibody}_{barcode}/seurat/bin_{binwidth}/Seurat_object.Rds',
     params:
         out_prefix  = 'results/{sample}/{antibody}_{barcode}/seurat/bin_{binwidth}/',
         genome      = config['general']['genome'],
     shell:
-        "Rscript {input.script} --sample {wildcards.sample}   --antibody {wildcards.antibody} --metadata {input.metadata}   --fragments {input.fragments} --peaks {input.peaks} --out_prefix {params.out_prefix} --window {wildcards.binwidth} --genome_version {params.genome}"
+        "Rscript {input.script} --sample {wildcards.sample}   --antibody {wildcards.antibody} --metadata {input.metadata} --fragments {input.fragments} --out_prefix {params.out_prefix} --window {wildcards.binwidth} --genome_version {params.genome}"
+
+rule create_seurat_object_peaks:
+    input:
+        fragments = 'results/{sample}/{antibody}_{barcode}/fragments/fragments.tsv.gz',
+        metadata  = 'results/{sample}/{antibody}_{barcode}/cell_picking/metadata.csv',
+        peaks     = 'results/{sample}/{antibody}_{barcode}/peaks/macs_broad/{antibody}_peaks.broadPeak',
+        script    = workflow_dir + '/scripts/create_seurat_object.R',
+    output:
+        'results/{sample}/{antibody}_{barcode}/seurat/peaks/Seurat_object.Rds',
+    params:
+        out_prefix  = 'results/{sample}/{antibody}_{barcode}/seurat/peaks/',
+        genome      = config['general']['genome'],
+    shell:
+        "Rscript {input.script} --sample {wildcards.sample}   --antibody {wildcards.antibody} --metadata {input.metadata} --fragments {input.fragments} " \ 
+        " --peaks {input.peaks} --out_prefix {params.out_prefix} --genome_version {params.genome}"
+
+
 

@@ -1,5 +1,5 @@
 include: "Snakefile_preprocess"
-include: "Snakefile_clustering"
+include: "Snakefile_single_modality"
 
 configfile: workflow.basedir + '/../config/config.yaml'
 

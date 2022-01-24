@@ -17,7 +17,7 @@ parser$add_argument("-a","--assay",type="character",default="bins_5000",
 parser$add_argument('-d','--ndim',type='integer',default=50,
                   help='Number of LSI components to use for UMAP and KNN')
 parser$add_argument('-m','--modality',type='character',
-                    help='modality to use for clustering if list of objects',default='merged')
+                    help='modality to use for clustering if list of objects (only applies for multimodal list of seurat objects)',default='merged')
 args <- parser$parse_args()
 
 ######################## End arguments parser
@@ -30,6 +30,9 @@ args <- parser$parse_args()
 
 UMAP_and_cluster <- function(seurat_object, assay, ndim = 50, output = 'seurat_object.Rds'){
   DefaultAssay(seurat_object) <- assay
+  if(!'modality' %in% colnames(seurat_object@meta.data)){
+    seurat_object$modality <- 'Unknown'
+  }
   modality <- unique(seurat_object$modality)
   
   seurat_object <- RunTFIDF(seurat_object)
@@ -80,8 +83,8 @@ seurat.ls <- readRDS(args$input)
 
 # If single modality
 if(length(seurat.ls) ==1){
-  seurat.ls <- UMAP_and_cluster(seurat_object = seurat.ls,
-                                assay = args$assay,
+    seurat.ls <- UMAP_and_cluster(seurat_object = seurat.ls,
+                                  assay = args$assay,
                                 ndim = args$ndim,
                                 output = args$output)
   }

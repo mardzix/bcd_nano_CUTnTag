@@ -160,7 +160,7 @@ rule nbiotech_barcode_overlap_peaks:
         tmpdir               = config['general']['tempdir']
     shell:
         'bedtools intersect -abam {input.bam} -b {input.peaks} -u | samtools view -f2 | '
-        'awk -f {params.get_cell_barcode} | sed "s/CB:Z:/g" | python3 {params.add_sample_to_list} {wildcards.sample} | '
+        'awk -f {params.get_cell_barcode} | sed "s/CB:Z://g" | python3 {params.add_sample_to_list} {wildcards.sample} | '
         'sort -T {params.tmpdir} | uniq -c > {output.overlap} && [[ -s {output.overlap} ]] ; '
 
 rule nbiotech_barcode_metrics_all:
@@ -174,7 +174,7 @@ rule nbiotech_barcode_metrics_all:
       tmpdir             = config['general']['tempdir']
   shell:
     ' samtools view -f2 {input.bam}| '
-    'awk -f {params.get_cell_barcode} | sed "s/CB:Z:/g" | python3 {params.add_sample_to_list} {wildcards.sample} | '
+    'awk -f {params.get_cell_barcode} | sed "s/CB:Z://g" | python3 {params.add_sample_to_list} {wildcards.sample} | '
     'sort -T {params.tmpdir} | uniq -c > {output.all_bcd} && [[ -s {output.all_bcd} ]] ; '
 
 ####### CELLS SELECTION
@@ -208,7 +208,8 @@ rule nbiotech_create_seurat_object:
     params:
         out_prefix  = 'results/nbiotech_data/{sample}/seurat/bin_{binwidth}/',
         genome      = config['general']['genome'],
+        antibody    = lambda wildcards: wildcards.sample.split("_")[0]
     shell:
-        "Rscript {input.script} --sample {wildcards.sample}   --sample {wildcards.sample} --metadata {input.metadata}   --fragments {input.fragments} --peaks {input.peaks} --out_prefix {params.out_prefix} --window {wildcards.binwidth} --genome_version {params.genome}"
+        "Rscript {input.script} --sample {wildcards.sample} --antibody {params.antibody} --metadata {input.metadata}  --fragments {input.fragments} --peaks {input.peaks} --out_prefix {params.out_prefix} --window {wildcards.binwidth} --genome_version {params.genome}"
 
 

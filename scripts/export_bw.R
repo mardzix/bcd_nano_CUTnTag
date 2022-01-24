@@ -18,6 +18,9 @@ parser$add_argument("-f", "--fragments", type="character", default='foo',
                     help="path to the corresponding fragments file")
 parser$add_argument("-o", "--output_folder", type="character", default='foo',
                     help="output folder")
+parser$add_argument("-d", "--idents", type="character", default='active.ident',
+                    help="identities to use for export")
+
 args <- parser$parse_args()
 
 ###################
@@ -35,7 +38,13 @@ fragments <- GRanges(seqnames=fragments$V1, ranges = IRanges(start=fragments$V2,
 
 dir.create(args$output_folder,recursive = TRUE)
 
-lapply(levels(seurat_object@active.ident),function(x){
+if(args$idents != 'active.ident'){
+  seurat_object@active.ident <- seurat_object@meta.data[,args$idents]
+}
+
+clusters_to_use <- levels(seurat_object@active.ident)
+
+lapply(clusters_to_use,function(x){
   exportBW(object = seurat_object,
            cluster = x,
            fragments = fragments,

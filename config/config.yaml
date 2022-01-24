@@ -1,7 +1,7 @@
 samples:
   bcdCT_MB21_02:
     fastq_path:
-      /data/proj/GCB_MB/bcd_CT/single-cell/fastq_per_barcode/bcdCT_MB21_02/
+      /data/proj/GCB_MB/bcd_CT/single-cell/fastq/P23209/P23209/P23209_1001/
     barcodes:
       ATAC: TATAGCCT
       H3K27ac: ATAGAGGC
@@ -11,7 +11,7 @@ samples:
 
   bcdCT_MB21_03:
     fastq_path:
-      /data/proj/GCB_MB/bcd_CT/single-cell/fastq_per_barcode/bcdCT_MB21_03/
+      /data/proj/GCB_MB/bcd_CT/single-cell/fastq/P23209/P23209/P23209_1002/
     barcodes:
       H3K27ac: ATAGAGGC
       H3K27me3: CCTATCCT
@@ -20,11 +20,35 @@ samples:
     Age:
       P19
 
+  bcdCT_MB21_04:
+    fastq_path:
+      /data/proj/GCB_MB/bcd_CT/single-cell/fastq/P24004/P24004_1001/
+    barcodes:
+      ATAC: TATAGCCT
+      H3K27ac: ATAGAGGC
+      H3K27me3: CCTATCCT
+    GFP:
+      unsorted
+    Age:
+      P19
+
+  bcdCT_MB21_05:
+      fastq_path:
+        /data/proj/GCB_MB/bcd_CT/single-cell/fastq/P24004/P24004_1002/
+      barcodes:
+        H3K27ac: ATAGAGGC
+        H3K27me3: CCTATCCT
+      GFP:
+        unsorted
+      Age:
+        P19
+
 general:
   genome: mm10
   tempdir: /data/proj/GCB_MB/tmp
-  binwidth: [1000,2500,5000,10000,25000,50000,100000]
+  binwidth: [5000,10000,25000,50000,100000]
   conda_env: bcdCT
+  cellranger_ref: /data/ref/cellranger-atac/refdata-cellranger-atac-mm10-2020-A-2.0.0/
 
 nbiotech_data:
   url:

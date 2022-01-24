@@ -1,0 +1,105 @@
+---
+title: "R Notebook"
+output:
+  pdf_document: default
+  html_notebook: default
+  html_document:
+    df_print: paged
+---
+
+```{r}
+library(Seurat)
+library(Signac)
+library(ggplot2)
+set.seed(1234)
+
+prefix = '/data/proj/GCB_MB/bcd_CT/single-cell/results/'
+```
+
+```{r}
+seurat.ls <- paste0(prefix,'/single_modality/',c('ATAC','H3K27ac','H3K27me3'), '/seurat/peaks/Seurat_object_clustered_renamed.Rds')
+seurat.ls <- lapply(seurat.ls,readRDS)
+```
+
+```{r,fig.width=6,fig.height=6}
+lapply(seurat.ls,function(x){
+  lapply(c('idents_L1','idents_L2','idents_L3','seurat_clusters'),function(ident){
+    DimPlot(x,group.by = ident,repel=TRUE,label=TRUE,label.size = 2) + 
+      NoLegend() + 
+      ggtitle(paste(unique(x$modality),ident) )
+  })
+})
+
+
+  DimPlot(seurat_object, label=TRUE, repel=TRUE, group.by='idents_L1') + NoLegend() + ggtitle(paste(modality,"idents_L1"))
+  DimPlot(seurat_object, label=TRUE, repel=TRUE, group.by='idents_L2') + NoLegend() + ggtitle(paste(modality,"idents_L2"))
+  DimPlot(seurat_object, label=TRUE, repel=TRUE, group.by='idents_L3') + NoLegend() + ggtitle(paste(modality,"idents_L3"))
+  DimPlot(seurat_object, label=TRUE, repel=TRUE, group.by='seurat_clusters') + NoLegend() + ggtitle(paste(modality,"seurat_clusters"))
+  dev.off()
+}
+
+modality = 'ATAC'
+pdf(file = paste0('/data/proj/GCB_MB/bcd_CT/single-cell/results/single_modality/',modality,'/seurat/peaks/',modality,'_clustering.pdf'),width = 12,height = 12)
+for(i in c("seurat_clusters","idents_L1","idents_L2","idents_L3")){
+  print(DimPlot(seurat.ls[[1]], label=TRUE, repel=TRUE, group.by=i,) + NoLegend() + ggtitle(paste(modality,i)))
+}
+dev.off()
+
+modality = 'H3K27ac'
+pdf(file = paste0('/data/proj/GCB_MB/bcd_CT/single-cell/results/single_modality/',modality,'/seurat/peaks/',modality,'_clustering.pdf'),width = 7,height = 7)
+for(i in c("seurat_clusters","idents_L1","idents_L2","idents_L3")){
+  print(DimPlot(seurat.ls[[1]], label=TRUE, repel=TRUE, group.by=i) + NoLegend() + ggtitle(paste(modality,i)))
+}
+dev.off()
+
+modality = 'H3K27me3'
+pdf(file = paste0('/data/proj/GCB_MB/bcd_CT/single-cell/results/single_modality/',modality,'/seurat/peaks/',modality,'_clustering.pdf'),width = 7,height = 7)
+for(i in c("seurat_clusters","idents_L1","idents_L2","idents_L3")){
+  print(DimPlot(seurat.ls[[1]], label=TRUE, repel=TRUE, group.by=i) + NoLegend() + ggtitle(paste(modality,i)))
+}
+dev.off()
+
+
+
+```
+
+
+
+
+```{r integration}
+integrated.ls <- paste0('/data/proj/GCB_MB/bcd_CT/single-cell/results/single_modality/',c('ATAC','H3K27ac','H3K27me3'),'/seurat/peaks/integration/integration_RNA.Rds')
+
+integrated.ls <- lapply(integrated.ls,readRDS)
+```
+
+```{r plot_integrated,fig.width=10,fig.height=5}
+
+
+p <- lapply(integrated.ls,function(x){
+  modality <- unique(x@meta.data[x$experiment=='bcdCT','modality'])
+  p1 <- DimPlot(x[,x$experiment=='bcdCT'], label=TRUE,repel = TRUE,label.size = 3) + NoLegend() + ggtitle(paste0(paste(modality, 'bcdCT')))
+  p2 <- DimPlot(x[,x$experiment=='scRNAseq'], label=TRUE,repel = TRUE, group.by='TaxonomyRank3',label.size = 3) + NoLegend() + ggtitle('scRNAseq')
+  p1+p2
+})
+
+
+p
+
+
+```
+
+```{r plot_integrated2,fig.width=10,fig.height=5}
+
+
+p <- lapply(integrated.ls,function(x){
+  modality <- unique(x@meta.data[x$experiment=='bcdCT','modality'])
+  p1 <- DimPlot(x[,x$experiment=='bcdCT'], label=TRUE,repel = TRUE,label.size = 2) + NoLegend() + ggtitle(paste0(paste(modality, 'bcdCT')))
+  p2 <- DimPlot(x[,x$experiment=='scRNAseq'], label=TRUE,repel = TRUE, group.by='TaxonomyRank4',label.size = 2) + NoLegend() + ggtitle('scRNAseq')
+  p1+p2
+})
+
+
+print(p)
+
+
+```

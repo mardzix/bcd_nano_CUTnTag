@@ -6,7 +6,7 @@ output: html_document
 params:
   out_prefix: "/data/proj/GCB_MB/bcd_CT/single-cell/results/"
   modality: "H3K27ac"
-  binsize: 5000
+  feature: "peaks"
 ---
 
 ```{r setup, include=FALSE}
@@ -21,37 +21,151 @@ library(ggplot2)
 ```
 
 ```{r load_data}
-seurat <- readRDS(file=paste0(params$out_prefix,'/single_modality/',params$modality,'/seurat_',params$binsize,'/Seurat_object_clustered.Rds'))
+seurat <- readRDS(file=paste0(params$out_prefix,'/single_modality/',params$modality,'/seurat/',params$feature,'/Seurat_object_clustered.Rds'))
 ```
 
 
 ```{r,fig.width=6,fig.height=6}
-idents <- c(
-    '0' = 'Astro_1',
-    '1' = 'Astro_2',
-    '2' = 'Vascular_1',
-    '3' = 'Neuron_1',
-    '4' = 'MOL',
-    '5' = 'Microglia',
-    '6' = 'PVM',
-    '7' = 'Neuron_2',
-    '8' = 'Vascular_2',
-    '9' = 'Bergmann glia',
-    '10' = 'Vascular 3',
-    '11' = 'OPC-COP',
-    '12' = 'OEC',
-    '13' = 'Neuron_3',
-    '14' = 'Immune_3',
-    '15' = 'Radial glia',
-    '16' = 'Neuron_4',
-    '17' = 'Neuron_5',
-    '18' = 'Neuron_6',
-    '19' = 'Choroid plexus')
+idents_L1 <- c(
+  '0' = 'Astroependymal',
+  '1' = 'Astroependymal',
+  '2' = 'Oligodendrocytes',
+  '3' = 'Neurons',
+  '4' = 'Vascular',
+  '5' = 'Vascular',
+  '6' = 'Immune',
+  '7' = 'Immune',
+  '8' = 'Neurons',
+  '9' = 'Neurons',
+  '10' = 'Immune',
+  '11' = 'Astroependymal',
+  '12' = 'Astroependymal',
+  '13' = 'Astroependymal',
+  '14' = 'Oligodendrocytes',
+  '15' = 'Neurons',
+  '16' = 'Neurons',
+  '17' = 'Immune',
+  '18' = 'Vascular',
+  '19' = 'Vascular',
+  '20' = 'Olfactory ensheating cells',
+  '21' = 'Neurons',
+  '22' = 'Astroependymal',
+  '23' = 'Astroependymal',
+  '24' = 'Neurons',
+  '25' = 'Vascular',
+  '26' = 'Astroependymal',
+  '27' = 'Immune',
+  '28' = 'Vascular',
+  '29' = 'Neurons'
+)
+seurat.renamed                 <- RenameIdents(seurat,idents_L1)
+seurat.renamed$idents_L1       <- seurat.renamed@active.ident
+seurat.renamed                 <- SetIdent(seurat.renamed,cells = names(seurat.renamed$seurat_clusters), value = seurat.renamed$seurat_clusters)
 
-seurat.renamed <- RenameIdents(seurat,idents)
-DimPlot(seurat.renamed,label=TRUE,repel=TRUE)+ NoLegend()
+p1 <- DimPlot(seurat.renamed,label=TRUE,group.by = 'idents_L1') + NoLegend()
+p2 <- DimPlot(seurat.renamed,label=TRUE, group.by = 'seurat_clusters') + NoLegend()
+
+p1+p2
+```
+
+
+
+
+```{r rename_L2, fig.width=8, fig.height=4}
+idents_L2 <- c(
+    '0' = 'Astrocytes',
+    '1' = 'Astrocytes',
+    '2' = 'Mature Oligodendrocytes',
+    '3' = 'Neurons_1',
+    '4' = 'Vascular endothelial',
+    '5' = 'Vascular endothelial',
+    '6' = 'Microglia',
+    '7' = 'Microglia',
+    '8' = 'Immature neurons',
+    '9' = 'Neurons',
+    '10' = 'Microglia',
+    '11' = 'Radial glia',
+    '12' = 'Bergmann glia',
+    '13' = 'Astrocytes',
+    '14' = 'Immature Oligodendrocytes',
+    '15' = 'Neurons',
+    '16' = 'Neurons',
+    '17' = 'Macrophages',
+    '18' = 'Pericytes',
+    '19' = 'Vascular lepto-meningeal cells',
+    '20' = 'Olfactory ensheating cells',
+    '21' = 'Immature neurons',
+    '22' = 'Astrocytes',
+    '23' = 'Choroid plexus',
+    '24' = 'Neurons',
+    '25' = 'Vascular smooth muscle cells',
+    '26' = 'Ependymal cells',
+    '27' = 'Microglia',
+    '28' = 'Arachnoid barreer cells',
+    '29' = 'Neurons')
+
+seurat.renamed                <- RenameIdents(seurat.renamed,idents_L2)
+seurat.renamed$idents_L2      <- seurat.renamed@active.ident
+seurat.renamed                <- SetIdent(seurat.renamed,cells = names(seurat.renamed$seurat_clusters), value = seurat.renamed$seurat_clusters)
+
+
+
+p1 <- DimPlot(seurat.renamed,label=TRUE,repel=TRUE,group.by='idents_L1', label.size = 2.5) + NoLegend()
+p2 <- DimPlot(seurat.renamed,label=TRUE,repel=TRUE,group.by='idents_L2', label.size = 2.5) + NoLegend()
+p3 <- DimPlot(seurat.renamed,label=TRUE,repel=TRUE,group.by='seurat_clusters',label.size = 2.5) + NoLegend()
+
+p1+p2+p3
+```
+
+
+
+```{r rename_L3, fig.width=8, fig.height=4}
+idents_L3 <- c(
+    '0' = 'Telencephalon Astrocytes',
+    '1' = 'Non-Telencephalon Astrocytes',
+    '2' = 'Oligodendrocytes',
+    '3' = 'Neurons_1',
+    '4' = 'Vascular endothelial_1',
+    '5' = 'Vascular endothelial_2',
+    '6' = 'Microglia_1',
+    '7' = 'Microglia_2',
+    '8' = 'Neuroblast',
+    '9' = 'Cerebellum neurons',
+    '10' = 'Microglia_3',
+    '11' = 'SVZ Radial glia',
+    '12' = 'Bergmann glia',
+    '13' = 'Astrocytes_3',
+    '14' = 'OPC_COP',
+    '15' = 'Neurons_2',
+    '16' = 'Neurons_inhibitory',
+    '17' = 'Macrophages',
+    '18' = 'Pericytes',
+    '19' = 'Vascular lepto-meningeal cells',
+    '20' = 'Olfactory ensheating cells',
+    '21' = 'Dentate gyrus neuroblast',
+    '22' = 'Astrocytes_4',
+    '23' = 'Choroid plexus epithelial cells',
+    '24' = 'Neurons_3',
+    '25' = 'Vascular smooth muscle cells',
+    '26' = 'Ependymal cells',
+    '27' = 'Microglia_4',
+    '28' = 'Arachnoid barreer cells',
+    '29' = 'Neurons_5')
+
+seurat.renamed                <- RenameIdents(seurat.renamed,idents_L3)
+seurat.renamed$idents_L3      <- seurat.renamed@active.ident
+seurat.renamed                <- SetIdent(seurat.renamed,cells = names(seurat.renamed$seurat_clusters), value = seurat.renamed$seurat_clusters)
+
+
+
+p1 <- DimPlot(seurat.renamed,label=TRUE,repel=TRUE,group.by='idents_L1', label.size = 2.5) + NoLegend()
+p2 <- DimPlot(seurat.renamed,label=TRUE,repel=TRUE,group.by='idents_L2', label.size = 2.5) + NoLegend()
+p3 <- DimPlot(seurat.renamed,label=TRUE,repel=TRUE,group.by='idents_L3', label.size = 2.5) + NoLegend()
+p4 <- DimPlot(seurat.renamed,label=TRUE,repel=TRUE,group.by='seurat_clusters',label.size = 2.5) + NoLegend()
+
+p1+p2+p3+p4
 ```
 
 ```{r}
-saveRDS(object = seurat.renamed, file = paste0(params$out_prefix,'/single_modality/',params$modality,'/seurat_',params$binsize,'/Seurat_object_clustered_renamed.Rds'))
+saveRDS(object = seurat.renamed, file = paste0(params$out_prefix,'/single_modality/',params$modality,'/seurat/',params$fe,'/Seurat_object_clustered_renamed.Rds'))
 ```
