@@ -91,7 +91,7 @@ p1+p2
 
 
 
-```{r rename_L1,fig.width=8,fig.height=4}
+```{r rename_L1,fig.width=24,fig.height=8}
 idents_L1 <- c(
   '0' = 'Astroependymal',
   '1' = 'Immune',
@@ -134,7 +134,7 @@ p1+p2
 ```
 
 
-```{r rename_L2, fig.width=8, fig.height=4}
+```{r rename_L2, fig.width=24,fig.height=8}
 idents_L2 <- c(
   '0' = 'Astrocytes',
   '1' = 'Microglia',
@@ -180,7 +180,7 @@ p1+p2+p3
 ```
 
 
-```{r rename_L3, fig.width=8, fig.height=4}
+```{r rename_L3, fig.width=24,fig.height=8}
 idents_L3 <- c(
   '0' = 'Telencephalon Astrocytes',
   '1' = 'Microglia_1',
@@ -225,6 +225,13 @@ p3 <- DimPlot(seurat.renamed,label=TRUE,repel=TRUE,group.by='idents_L3', label.s
 p4 <- DimPlot(seurat.renamed,label=TRUE,repel=TRUE,group.by='seurat_clusters',label.size = 2.5) + NoLegend()
 
 p1+p2+p3+p4
+```
+
+```{r}
+lapply(c('idents_L1','idents_L2','idents_L3','seurat_clusters'),function(x){
+  p1 <- DimPlot(seurat.renamed, label=TRUE,group.by=x,repel=TRUE) + NoLegend()
+  ggsave(plot=p1, filename=paste0(params$out_prefix,'/single_modality/',params$modality,'/seurat/',params$feature,'/Seurat_UMAP_',x,'.pdf'),width=12,height=12)
+})
 ```
 
 ```{r}
