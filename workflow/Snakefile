@@ -10,4 +10,11 @@ shell.prefix("source ~/.bash_profile; conda activate " + config['general']['cond
 
 rule all_preprocess:
     input:
-        seurat        = ['results/{sample}/{antibody}_{barcode}/seurat/bin_{binwidth}/Seurat_object.Rds'.format(sample = sample, antibody = antibody, barcode = barcodes_dict[sample][antibody],binwidth = binwidth) for sample in samples_list  for antibody in barcodes_dict[sample].keys() for binwidth in config['general']['binwidth']],
+        # Single modality
+        expand('results/single_modality/{modality}/seurat/{feature}/Seurat_object_clustered_renamed.Rds',modality=antibodies_list,feature='peaks'),# TODO: use 'peaks' as variable
+        expand('results/single_modality/{modality}/seurat/{feature}/bigwig/{idents}/',modality=antibodies_list,feature='peaks',idents=['idents_L1', 'idents_L2', 'idents_L3', 'seurat_clusters']),# TODO: use 'peaks' and idents as variable
+        expand('results/single_modality/{modality}/seurat/{feature}/markers/{idents}/markers.csv',modality=antibodies_list,feature='peaks',idents=['idents_L1', 'idents_L2', 'idents_L3', 'seurat_clusters']),
+
+        # nbiotech data
+        expand('results/nbiotech_data/{sample}/seurat/bin_{binwidth}/Seurat_object.Rds', sample= samples_list, binwidth=5000)
+
