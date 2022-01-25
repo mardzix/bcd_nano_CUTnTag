@@ -1,6 +1,6 @@
 configfile: workflow.basedir + '/../config/config.yaml'
 
-samples_list = [x for x in config['nbiotech_data']['samples'].keys()]
+samples_list_nbiotech = [x for x in config['nbiotech_data']['samples'].keys()]
 # ['H3K27ac_N1', 'H3K27ac_N2', 'H3K27me3_N1', 'H3K27me3_N2', 'H3K27me3_N3', 'H3K27me3_N4']
 
 SRA_dict = config['nbiotech_data']['samples']
@@ -13,6 +13,8 @@ shell.prefix("source ~/.bash_profile; conda activate " + config['general']['cond
 
 rename_fastq_dic = {"R1": "2", "R2": "3", "R3": "4", "R4": "1"}
 
+localrules: nbiotech_fastq_dump
+
 rule nbiotech_all:
     input:
         expand('results/nbiotech_data/cellranger/{sample}/outs/possorted_bam.bam', sample= samples_list),
@@ -24,7 +26,7 @@ rule nbiotech_fastq_dump:
         "results/nbiotech_data/cellranger/fastq/{sample}/{SRA}_2.fastq",
         "results/nbiotech_data/cellranger/fastq/{sample}/{SRA}_3.fastq",
         "results/nbiotech_data/cellranger/fastq/{sample}/{SRA}_4.fastq",
-    threads: 8
+    threads: 10
     params:
         tmp = config['general']['tempdir'],
         out = "results/nbiotech_data/cellranger/fastq/{sample}/{SRA}.fastq",

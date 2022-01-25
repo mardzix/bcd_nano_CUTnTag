@@ -37,11 +37,12 @@ def get_fastq_for_cellranger(fastq_folder,sample,antibody,barcode):
     all_fastq_files  = glob.glob(fastq_folder + "/**/*.fastq.gz",recursive=True)
     all_fastq_parsed = [parse_fastq(x) for x in all_fastq_files]
     for x in all_fastq_parsed:
-        result.append('results/fastq_per_barcode/{sample}/{antibody}_{barcode}/barcode_{barcode}/{seq_id}_{number}_{lane}_R1_{suffix}'.format(\
+
+        result.append('results/multimodal_data/{sample}/fastq_per_barcode/{antibody}_{barcode}/barcode_{barcode}/{seq_id}_{number}_{lane}_R1_{suffix}'.format(\
             sample=sample, antibody=antibody , barcode=barcode, seq_id=x['id'], number=x['number'], lane=x['lane'], suffix=x['suffix']))
-        result.append('results/fastq_per_barcode/{sample}/{antibody}_{barcode}/barcode_{barcode}/{seq_id}_{number}_{lane}_R2_{suffix}'.format( \
+        result.append('results/multimodal_data/{sample}/fastq_per_barcode/{antibody}_{barcode}/barcode_{barcode}/{seq_id}_{number}_{lane}_R2_{suffix}'.format( \
             sample=sample,antibody=antibody,barcode=barcode,seq_id=x['id'],number=x['number'],lane=x['lane'],suffix=x['suffix']))
-        result.append('results/fastq_per_barcode/{sample}/{antibody}_{barcode}/barcode_{barcode}/{seq_id}_{number}_{lane}_R3_{suffix}'.format( \
+        result.append('results/multimodal_data/{sample}/fastq_per_barcode/{antibody}_{barcode}/barcode_{barcode}/{seq_id}_{number}_{lane}_R3_{suffix}'.format( \
             sample=sample,antibody=antibody,barcode=barcode,seq_id=x['id'],number=x['number'],lane=x['lane'],suffix=x['suffix']))
     return(result)
 
