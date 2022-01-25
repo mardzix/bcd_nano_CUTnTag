@@ -1,0 +1,13 @@
+configfile: workflow.basedir + '/../config/config.yaml'
+
+include: 'Snakefile_preprocess'
+
+samples_list  = list(config['samples'].keys())
+barcodes_dict = {sample: config['samples'][sample]['barcodes'] for sample in samples_list}
+
+shell.executable("/bin/bash")
+shell.prefix("source ~/.bash_profile; conda activate " + config['general']['conda_env']  + " ; ")
+
+rule all_preprocess:
+    input:
+        seurat        = ['results/{sample}/{antibody}_{barcode}/seurat/bin_{binwidth}/Seurat_object.Rds'.format(sample = sample, antibody = antibody, barcode = barcodes_dict[sample][antibody],binwidth = binwidth) for sample in samples_list  for antibody in barcodes_dict[sample].keys() for binwidth in config['general']['binwidth']],

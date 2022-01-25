@@ -1,0 +1,110 @@
+---
+title: "bcdCT_MB21_02_integration_RNAseq"
+output: html_document
+params:
+  out_prefix: "/data/proj/GCB_MB/bcd_CT/single-cell/results/"
+  sample: "bcdCT_MB21_02"
+  genome: 'mm10'
+  antibody: 'H3K27ac'
+
+---
+
+```{r libraries}
+library(Seurat)
+library(Signac)
+library(ggplot2)
+```
+
+```{r load_data}
+rna.seq <- readRDS(file='/data/proj/GCB_MB/single-cell-CUT-Tag/nbiotech_paper/analysis/results/Sten_RNA/clustering/01.clustering_20000cells.Rds')
+seurat  <- readRDS(file=paste0(params$out_prefix,params$sample,'/clustering/seurat_object.Rds'))
+```
+
+```{r remove_nonsense}
+rna.seq <- rna.seq[,-grep("Enteric",rna.seq$TaxonomyRank4)]
+rna.seq <- rna.seq[,-grep("Peripheral",rna.seq$TaxonomyRank4)]
+```
+
+
+```{r assay_common_features}
+integration_assay    <- paste0(params$antibody,'_GA')
+DefaultAssay(seurat) <- integration_assay
+  
+
+head(rownames(seurat))
+head(rownames(rna.seq))
+
+common.features <- table(c(rownames(seurat),rownames(rna.seq)))
+common.features <- names(common.features[common.features==2])
+head(common.features)
+length(common.features)
+```
+
+```{r integrate}
+transfer.anchors <- FindTransferAnchors(
+  reference = rna.seq,
+  query = seurat,
+  reduction = 'cca',
+  query.assay = integration_assay,reference.assay = 'RNA',
+  features = common.features
+)
+
+
+genes.use <- VariableFeatures(rna.seq)
+refdata <- GetAssayData(rna.seq, assay = "RNA", slot = "data")[genes.use, ]
+
+imputation <- TransferData(anchorset = transfer.anchors, refdata = refdata, weight.reduction = seurat[["lsi"]],dims = 2:50)
+
+seurat[['RNA']] <- imputation
+coembed <- merge(x =rna.seq , y = seurat)
+
+coembed <- ScaleData(coembed, features = genes.use, do.scale = FALSE)
+coembed <- RunPCA(coembed, features = genes.use, verbose = FALSE)
+coembed <- RunUMAP(coembed, dims = 1:30)
+
+```
+
+```{r plot, fig.width=40,fig.height=16}
+p1 <- DimPlot(seurat,pt.size=0.4,repel=TRUE,label=TRUE) + NoLegend() + ggtitle('multimodal CUT&Tag un-integrated')
+p2 <- DimPlot(rna.seq,label=TRUE,repel=TRUE,pt.size=0.2,group.by="TaxonomyRank4") + NoLegend() + ggtitle('mouse brain atlas scRNA-seq un-integrated')
+
+p3 <- DimPlot(coembed[,coembed$orig.ident != 'bcdCT'],group.by='TaxonomyRank3',label=TRUE,pt.size = 0.2,repel = TRUE,) + NoLegend()
+p4 <- DimPlot(coembed[,coembed$orig.ident == 'bcdCT'],label=TRUE,pt.size=0.2) + NoLegend()
+p5 <- DimPlot(coembed[,coembed$orig.ident != 'bcdCT'],group.by='TaxonomyRank4',label=TRUE,pt.size = 0.2,repel=TRUE) + NoLegend()
+
+p1+p2
+p3 + p5 + p4
+
+```
+
+
+```{r}
+seurat <- RenameIdents(seurat,
+                       list('0'="Vascular endothelial",
+                            '1'='Astrocytes_1',
+                            '2'='Neurons_1',
+                            '3'='Astrocytes_2',
+                            '4'='Neurons_2',
+                            '5'='mOL',
+                            '6'='Immune_micoglia',
+                            '7'='OEC',
+                            '8'='VLMC',
+                            '9'='OPC-COP',
+                            '10'='Neurons_3',
+                            '11'='Astrocytes_3',
+                            '12'='Pericytes',
+                            '13'='Astrocytes_4_new',
+                            '14'='Radial_glia_ependymal',
+                            '15'='Neurons_4',
+                            '16'='Choroid_plexus'))
+
+
+DimPlot(seurat,pt.size = 0.2,label=TRUE,repel=TRUE) + NoLegend()
+```
+
+
+
+```{r}
+saveRDS(object = coembed,)
+```
+
