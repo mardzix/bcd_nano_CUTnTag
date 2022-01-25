@@ -2,26 +2,18 @@ include: 'Snakefile_prep.smk'
 
 rule all_preprocess:
     input:
-        cellranger              = ['results/cellranger/{sample}_{antibody}_{barcode}/outs/possorted_bam.bam'.format(sample = sample, antibody = antibody, barcode = barcodes_dict[sample][antibody]) for sample in samples_list  for antibody in barcodes_dict[sample].keys()],
-        bigwig_all              = ['results/{sample}/{antibody}_{barcode}/bigwig/all_reads.bw'.format(sample = sample, antibody = antibody, barcode = barcodes_dict[sample][antibody]) for sample in samples_list  for antibody in barcodes_dict[sample].keys()],
-        macs_narrow             = ['results/{sample}/{antibody}_{barcode}/peaks/macs_narrow/{antibody}_peaks.narrowPeak'.format(sample = sample, antibody = antibody, barcode = barcodes_dict[sample][antibody]) for sample in samples_list  for antibody in barcodes_dict[sample].keys()],
-        macs_broad              = ['results/{sample}/{antibody}_{barcode}/peaks/macs_broad/{antibody}_peaks.broadPeak'.format(sample = sample, antibody = antibody, barcode = barcodes_dict[sample][antibody]) for sample in samples_list  for antibody in barcodes_dict[sample].keys()],
-        chrom_sizes             = 'results/mm10.chrom.sizes',
-        SEACR_peaks             = ['results/{sample}/{antibody}_{barcode}/peaks/SEACR/peaks.relaxed.bed'.format(sample = sample, antibody = antibody, barcode = barcodes_dict[sample][antibody]) for sample in samples_list  for antibody in barcodes_dict[sample].keys()],
-        fragments               = ['results/{sample}/{antibody}_{barcode}/fragments/fragments.tsv.gz'.format(sample = sample, antibody = antibody, barcode = barcodes_dict[sample][antibody]) for sample in samples_list  for antibody in barcodes_dict[sample].keys()],
-        peaks_overlap           = ['results/{sample}/{antibody}_{barcode}/barcode_metrics/peaks_barcodes.txt'.format(sample = sample, antibody = antibody, barcode = barcodes_dict[sample][antibody]) for sample in samples_list  for antibody in barcodes_dict[sample].keys()],
-        barcodes_sum            = ['results/{sample}/{antibody}_{barcode}/barcode_metrics/all_barcodes.txt'.format(sample = sample, antibody = antibody, barcode = barcodes_dict[sample][antibody]) for sample in samples_list  for antibody in barcodes_dict[sample].keys()],
-        cell_pick               = ['results/{sample}/{antibody}_{barcode}/cell_picking/metadata.csv'.format(sample = sample, antibody = antibody, barcode = barcodes_dict[sample][antibody]) for sample in samples_list  for antibody in barcodes_dict[sample].keys()],
-        seurat                  = ['results/{sample}/{antibody}_{barcode}/seurat/bin_{binwidth}/Seurat_object.Rds'.format(sample = sample, antibody = antibody, barcode = barcodes_dict[sample][antibody],binwidth = binwidth) for sample in samples_list for antibody in barcodes_dict[sample].keys() for binwidth in config['general']['binwidth']],
-        seurat_peaks            = ['results/{sample}/{antibody}_{barcode}/seurat/peaks/Seurat_object.Rds'.format(sample = sample, antibody = antibody, barcode = barcodes_dict[sample][antibody]) for sample in samples_list for antibody in barcodes_dict[sample].keys()],
-
-        # Merged objects for single modality
-        fragments_merged        = expand('results/single_modality/{modality}/fragments/fragments.tsv.gz', modality= antibodies_list),
-        bigwig_merged           = expand('results/single_modality/{modality}/fragments/fragments.bw', modality = antibodies_list),
-        macs_merged             = expand('results/single_modality/{modality}/peaks/macs_broad/{modality}_peaks.broadPeak', modality= antibodies_list),  # Merged peaks file
-        seurat_merged_single    = expand('results/single_modality/{modality}/seurat/{feature}/Seurat_object.Rds', modality= antibodies_list, feature = features),  # Seurat object peaks
-        seurat_merged_cluster   = expand('results/single_modality/{modality}/seurat/{feature}/Seurat_object_clustered.Rds', modality= antibodies_list, feature = features),
-
+        cellranger          = ['results/cellranger/{sample}_{antibody}_{barcode}/outs/possorted_bam.bam'.format(sample = sample, antibody = antibody, barcode = barcodes_dict[sample][antibody]) for sample in samples_list  for antibody in barcodes_dict[sample].keys()],
+        bigwig_all          = ['results/{sample}/{antibody}_{barcode}/bigwig/all_reads.bw'.format(sample = sample, antibody = antibody, barcode = barcodes_dict[sample][antibody]) for sample in samples_list  for antibody in barcodes_dict[sample].keys()],
+        macs_narrow         = ['results/{sample}/{antibody}_{barcode}/peaks/macs_narrow/{antibody}_peaks.narrowPeak'.format(sample = sample, antibody = antibody, barcode = barcodes_dict[sample][antibody]) for sample in samples_list  for antibody in barcodes_dict[sample].keys()],
+        macs_broad          = ['results/{sample}/{antibody}_{barcode}/peaks/macs_broad/{antibody}_peaks.broadPeak'.format(sample = sample, antibody = antibody, barcode = barcodes_dict[sample][antibody]) for sample in samples_list  for antibody in barcodes_dict[sample].keys()],
+        chrom_sizes         = 'results/mm10.chrom.sizes',
+        SEACR_peaks         = ['results/{sample}/{antibody}_{barcode}/peaks/SEACR/peaks.relaxed.bed'.format(sample = sample, antibody = antibody, barcode = barcodes_dict[sample][antibody]) for sample in samples_list  for antibody in barcodes_dict[sample].keys()],
+        fragments           = ['results/{sample}/{antibody}_{barcode}/fragments/fragments.tsv.gz'.format(sample = sample, antibody = antibody, barcode = barcodes_dict[sample][antibody]) for sample in samples_list  for antibody in barcodes_dict[sample].keys()],
+        peaks_overlap       = ['results/{sample}/{antibody}_{barcode}/barcode_metrics/peaks_barcodes.txt'.format(sample = sample, antibody = antibody, barcode = barcodes_dict[sample][antibody]) for sample in samples_list  for antibody in barcodes_dict[sample].keys()],
+        barcodes_sum        = ['results/{sample}/{antibody}_{barcode}/barcode_metrics/all_barcodes.txt'.format(sample = sample, antibody = antibody, barcode = barcodes_dict[sample][antibody]) for sample in samples_list  for antibody in barcodes_dict[sample].keys()],
+        cell_pick           = ['results/{sample}/{antibody}_{barcode}/cell_picking/metadata.csv'.format(sample = sample, antibody = antibody, barcode = barcodes_dict[sample][antibody]) for sample in samples_list  for antibody in barcodes_dict[sample].keys()],
+        seurat              = ['results/{sample}/{antibody}_{barcode}/seurat/bin_{binwidth}/Seurat_object.Rds'.format(sample = sample, antibody = antibody, barcode = barcodes_dict[sample][antibody],binwidth = binwidth) for sample in samples_list for antibody in barcodes_dict[sample].keys() for binwidth in config['general']['binwidth']],
+        seurat_peaks        = ['results/{sample}/{antibody}_{barcode}/seurat/peaks/Seurat_object.Rds'.format(sample = sample, antibody = antibody, barcode = barcodes_dict[sample][antibody]) for sample in samples_list for antibody in barcodes_dict[sample].keys()],
 
 rule demultiplex:
     input:
@@ -214,61 +206,5 @@ rule create_seurat_object_peaks:
         "Rscript {input.script} --sample {wildcards.sample}   --antibody {wildcards.antibody} --metadata {input.metadata} --fragments {input.fragments} " \ 
         " --peaks {input.peaks} --out_prefix {params.out_prefix} --genome_version {params.genome}"
 
-rule merge_fragments_file:
-    input:
-        fragments = lambda wildcards: get_fragments_per_modality(modality = wildcards.modality, barcodes_dict = barcodes_dict)
-    output:
-        fragments_merged = 'results/single_modality/{modality}/fragments/fragments.tsv.gz',
-        index            = 'results/single_modality/{modality}/fragments/fragments.tsv.gz.tbi'
-    params:
-        tmpdir           = config['general']['tempdir']
-    shell:
-        'zcat {input.fragments} | sort -T {params.tmpdir} -k1,1 -k2,2n | bgzip > {output.fragments_merged} && tabix -p bed {output.fragments_merged}'
-
-rule fragments_to_bw:
-    input:
-        fragments   = 'results/single_modality/{modality}/fragments/fragments.tsv.gz',
-        chrom_sizes = 'results/mm10.chrom.sizes'
-    output:
-        bam        = temp('results/single_modality/{modality}/fragments/fragments.bam'),
-        bam_sorted = temp('results/single_modality/{modality}/fragments/fragments_sorted.bam'),
-        index      = temp('results/single_modality/{modality}/fragments/fragments_sorted.bam.bai'),
-        bigwig     = 'results/single_modality/{modality}/fragments/fragments.bw',
-    threads: 8
-    shell:
-        "bedToBam -i {input.fragments} -g {input.chrom_sizes} > {output.bam} && "
-        "samtools sort -@ {threads} -o {output.bam_sorted} {output.bam} &&"
-        "samtools index {output.bam_sorted} && "
-        "bamCoverage -b {output.bam_sorted} -o {output.bigwig} -p {threads} --minMappingQuality 5 --binSize 50 --smoothLength 250 --normalizeUsing RPKM --ignoreDuplicates"
-
-rule run_macs_broad_merged:
-    input:
-        fragments = 'results/single_modality/{modality}/fragments/fragments.tsv.gz'
-    output:
-        broad_peaks = 'results/single_modality/{modality}/peaks/macs_broad/{modality}_peaks.broadPeak'
-    params:
-        macs_outdir = 'results/single_modality/{modality}/peaks/macs_broad/'
-    shell:
-        'macs2 callpeak -t {input} -g mm -f BED -n {wildcards.modality} '
-        '--outdir {params.macs_outdir} --llocal 100000 --keep-dup=1 --broad-cutoff=0.1 ' 
-        '--min-length 1000 --max-gap 1000 --broad --nomodel 2>&1 '
 
 
-rule merge_seurat_single_modality:
-    input:
-        seurat = lambda wildcards: get_seurat_per_modality(modality=wildcards.modality,barcodes_dict=barcodes_dict, feature=wildcards.feature),
-        script = workflow_dir + '/scripts/merge_objects.R'
-    output:
-        seurat = 'results/single_modality/{modality}/seurat/{feature}/Seurat_object.Rds'
-    shell:
-        'Rscript {input.script} -i {input.seurat} -o {output.seurat}'
-
-
-rule cluster:
-    input:
-        seurat = 'results/single_modality/{modality}/seurat/{feature}/Seurat_object.Rds',
-        script = workflow_dir + '/scripts/UMAP_cluster.R'
-    output:
-        seurat = 'results/single_modality/{modality}/seurat/{feature}/Seurat_object_clustered.Rds'
-    shell:
-        'Rscript {input.script} -i {input.seurat} -o {output.seurat} -a {wildcards.feature} -d 40 '

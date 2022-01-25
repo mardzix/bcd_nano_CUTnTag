@@ -2,9 +2,9 @@ import itertools
 import os
 import glob
 
-configfile: workflow.basedir + '/../../config/config.yaml'
+configfile: workflow.basedir + '/../config/config.yaml'
 
-workflow_dir = os.path.dirname(workflow.basedir) + '/../'
+workflow_dir = os.path.dirname(workflow.basedir)
 
 samples_list  = list(config['samples'].keys())
 # print(samples_list)
@@ -56,22 +56,6 @@ def parse_fastq(path):
     result['id']     = re.split('_S[0-9]+_',fastq)[0].strip("_")
     result['suffix']  = re.split('_[RI][0-9]+_',fastq)[1].strip("_")
     return(result)
-
-def get_fragments_per_modality(modality, barcodes_dict):
-    result = []
-    for s in barcodes_dict:
-        for m in barcodes_dict[s]:
-            if modality == m:
-               result.append('results/{sample}/{modality}_{barcode}/fragments/fragments.tsv.gz'.format(sample = s, modality = m, barcode=barcodes_dict[s][m]))
-    return result
-
-def get_seurat_per_modality(modality, barcodes_dict,feature):
-    result = []
-    for s in barcodes_dict:
-        for m in barcodes_dict[s]:
-            if modality == m:
-               result.append('results/{sample}/{modality}_{barcode}/seurat/{feature}/Seurat_object.Rds'.format(sample = s, modality = m, barcode=barcodes_dict[s][m], feature = feature))
-    return result
 
 shell.executable("/bin/bash")
 shell.prefix("source ~/.bash_profile; conda activate " + config['general']['conda_env']  + " ; ")

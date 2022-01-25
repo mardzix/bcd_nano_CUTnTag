@@ -1,8 +1,4 @@
-import os
-
-configfile: workflow.basedir + '/../../config/config.yaml'
-
-workflow_dir = os.path.dirname(workflow.basedir) + '/..'
+configfile: workflow.basedir + '/../config/config.yaml'
 
 samples_list = [x for x in config['nbiotech_data']['samples'].keys()]
 # ['H3K27ac_N1', 'H3K27ac_N2', 'H3K27me3_N1', 'H3K27me3_N2', 'H3K27me3_N3', 'H3K27me3_N4']
@@ -147,7 +143,7 @@ rule nbiotech_add_barcode_fragments:
         fragments = 'results/nbiotech_data/{sample}/fragments/fragments.tsv.gz',
         index     = 'results/nbiotech_data/{sample}/fragments/fragments.tsv.gz.tbi',
     params:
-        script    = workflow_dir + '/scripts/add_sample_to_fragments.py',
+        script    = os.path.dirname(workflow.basedir) + '/scripts/add_sample_to_fragments.py',
     shell:
         'python3 {params.script} {input.fragments} {wildcards.sample} | bgzip > {output.fragments}; '
         'tabix -p bed {output.fragments}'
@@ -159,8 +155,8 @@ rule nbiotech_barcode_overlap_peaks:
     output:
         overlap = 'results/nbiotech_data/{sample}/barcode_metrics/peaks_barcodes.txt'
     params:
-        get_cell_barcode     = workflow_dir + '/scripts/get_cell_barcode.awk',
-        add_sample_to_list   = workflow_dir + '/scripts/add_sample_to_list.py',
+        get_cell_barcode     = os.path.dirname(workflow.basedir) + '/scripts/get_cell_barcode.awk',
+        add_sample_to_list   = os.path.dirname(workflow.basedir) + '/scripts/add_sample_to_list.py',
         tmpdir               = config['general']['tempdir']
     shell:
         'bedtools intersect -abam {input.bam} -b {input.peaks} -u | samtools view -f2 | '
@@ -173,8 +169,8 @@ rule nbiotech_barcode_metrics_all:
   output:
     all_bcd    = 'results/nbiotech_data/{sample}/barcode_metrics/all_barcodes.txt'
   params:
-      get_cell_barcode   = workflow_dir + '/scripts/get_cell_barcode.awk',
-      add_sample_to_list = workflow_dir + '/scripts/add_sample_to_list.py',
+      get_cell_barcode   = os.path.dirname(workflow.basedir) + '/scripts/get_cell_barcode.awk',
+      add_sample_to_list = os.path.dirname(workflow.basedir) + '/scripts/add_sample_to_list.py',
       tmpdir             = config['general']['tempdir']
   shell:
     ' samtools view -f2 {input.bam}| '
@@ -196,7 +192,7 @@ rule nbiotech_cell_selection:
         'results/nbiotech_data/{sample}/cell_picking/cells_not_picked.bw',
         'results/nbiotech_data/{sample}/cell_picking/metadata.csv',
     params:
-        script      = workflow_dir + '/scripts/pick_cells.R',
+        script      = os.path.dirname(workflow.basedir) + '/scripts/pick_cells.R',
         out_prefix  = 'results/nbiotech_data/{sample}/cell_picking/',
     shell:
         "Rscript {params.script} --metadata {input.metadata} --fragments {input.fragments} --bcd_all {input.bcd_all} --bcd_peak {input.bcd_peak} --sample {wildcards.sample} --sample {wildcards.sample} --out_prefix {params.out_prefix}"
@@ -206,7 +202,7 @@ rule nbiotech_create_seurat_object:
         fragments = 'results/nbiotech_data/{sample}/fragments/fragments.tsv.gz',
         peaks     = 'results/nbiotech_data/{sample}/peaks/macs_broad/{sample}_peaks.broadPeak',
         metadata  = 'results/nbiotech_data/{sample}/cell_picking/metadata.csv',
-        script    = workflow_dir + '/scripts/create_seurat_object.R',
+        script    = os.path.dirname(workflow.basedir) + '/scripts/create_seurat_object.R',
     output:
         'results/nbiotech_data/{sample}/seurat/bin_{binwidth}/Seurat_object.Rds',
     params:
