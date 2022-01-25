@@ -1,0 +1,59 @@
+---
+title: "rename_multimodal.Rmd"
+author: "Marek Bartosovic"
+date: "01/12/2021"
+output: html_document
+params:
+  out_prefix: "/data/proj/GCB_MB/bcd_CT/single-cell/results/single_modality/"
+  modality: "H3K27ac"
+  binsize: 5000
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r libraries}
+library(Seurat)
+library(Signac)
+library(ggplot2)
+```
+
+```{r load_data}
+seurat <- readRDS(file=paste0(params$out_prefix,params$modality,'/seurat_',params$binsize,'/Seurat_object_clustered.Rds'))
+```
+
+
+```{r,fig.width=6,fig.height=6}
+idents <- c(
+    '0' = 'Astro_1',
+    '1' = 'Astro_2',
+    '2' = 'Vascular_1',
+    '3' = 'Neuron_1',
+    '4' = 'mOL',
+    '5' = 'Microglia',
+    '6' = 'PVM',
+    '7' = 'Neuron_2',
+    '8' = 'Vascular_2',
+    '9' = 'Bergmann glia',
+    '10' = 'Vascular 3',
+    '11' = 'COP-NFOL',
+    '12' = 'OEC',
+    '13' = 'Neuron_3',
+    '14' = 'Immune_3',
+    '15' = 'Radial glia',
+    '16' = 'Neuron_4',
+    '17' = 'Neuron_5',
+    '18' = 'Neuron_6',
+    '19' = 'Choroid plexus')
+
+seurat.renamed <- RenameIdents(seurat,idents)
+
+DimPlot(seurat.renamed,label=TRUE,repel=TRUE)+ NoLegend()
+
+```
+
+
+
+

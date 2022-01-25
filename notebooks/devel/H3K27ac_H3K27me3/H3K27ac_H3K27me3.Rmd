@@ -1,0 +1,41 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r}
+library(Seurat)
+library(Signac)
+library(ggplot2)
+library(purrr)
+```
+
+```{r}
+seurat.ls <- readRDS(file='/data/proj/GCB_MB/bcd_CT/single-cell/results/multiple_modalities/H3K27ac_H3K27me3/seurat_5000/Seurat_object_clustered.Rds')
+```
+
+```{r,fig.width=12,fig.height=4}
+clusterings.ls <- lapply(seurat.ls,function(x){x@active.ident})
+names(clusterings.ls) <- paste0('clustering_',names(clusterings.ls))
+
+
+
+seurat.ls <- lapply(seurat.ls,function(seurat_object){
+  seurat_object <- AddMetaData(object = seurat_object,metadata = clusterings.ls)
+})
+
+p.ls <- lapply(colnames(clusterings.df),function(x){
+  lapply(seurat.ls,function(seurat_object){
+    DimPlot(seurat_object,group.by = x,label=TRUE) + NoLegend() + ggtitle(paste0('clustering=',x,'; reduction=',unique(seurat_object$modality))) + theme(title = element_text(size = 6))
+  })
+})
+
+library(gridExtra)
+p.ls2 <- lapply(p.ls,function(x){
+  do.call('grid.arrange',c(x,ncol=3))
+})
+
+lapply(p.ls2,plot)
+```
+

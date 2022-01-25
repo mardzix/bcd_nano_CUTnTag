@@ -1,0 +1,111 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r libraries}
+library(Seurat)
+library(Signac)
+library(slingshot)
+```
+
+
+```{r load_seurat}
+seurat <- readRDS(file='/data/proj/GCB_MB/bcd_CT/single-cell/results/multiple_modalities/ATAC_H3K27ac_H3K27me3/seurat_5000/Seurat_object_clustered.Rds')
+
+lapply(seurat,DimPlot)
+
+
+```
+
+```{r subset_seurat}
+seurat.oligo <- lapply(seurat,function(x){
+  x[,x@active.ident %in% c(4,10,'OLG','OPC-COP','mOL','MOL')]
+})
+
+lapply(seurat.oligo,DimPlot)
+
+```
+
+
+```{r slingshot}
+sds <- slingshot(Embeddings(seurat.oligo$merged, "umap"), clusterLabels = seurat.oligo$merged$seurat_clusters, 
+                stretch = 0)
+
+pt <- slingPseudotime(sds)
+
+seurat.oligo <- lapply(seurat.oligo,function(x){AddMetaData(x,pt,col.name = 'pseudotime')})
+
+library(ggplot2)
+lapply(seurat.oligo, function(x){FeaturePlot(x,'pseudotime') + scale_color_viridis_c() + ggtitle(unique(x$modality)) })
+```
+
+```{r}
+seurat.oligo <- lapply(seurat.oligo,function(x){
+  DefaultAssay(x) <- 'GA'
+  x
+})
+
+#markers         <- FindAllMarkers(seurat.oligo$merged)
+markers.H3K27ac <- FindAllMarkers(seurat.oligo$H3K27ac)
+
+seurat.oligo$ATAC         <- SetIdent(object = seurat.oligo$ATAC,cells = names(seurat.oligo$H3K27ac@active.ident),value = seurat.oligo$H3K27ac@active.ident)
+seurat.oligo$ATAC_small   <- seurat.oligo$ATAC[,seurat.oligo$ATAC@active.ident != 'OLG']
+markers.ATAC              <- FindAllMarkers(seurat.oligo$ATAC_small)
+
+markers.module.H3K27ac <- markers.H3K27ac[markers.H3K27ac$cluster == 'MOL' & markers.H3K27ac$avg_log2FC > 0 & markers.H3K27ac$p_val_adj < 0.05,]
+markers.module.ATAC <- markers.ATAC[markers.ATAC$cluster == 'MOL' &  markers.ATAC$avg_log2FC > 0 & markers.ATAC$p_val_adj < 0.05,]
+
+# H3K27ac up windows
+genes <- markers.module.H3K27ac$gene
+length(genes)
+
+# ATAC up windows
+# genes <- markers.module.ATAC$gene
+# length(genes)
+
+# H3K27ac+ATAC up windows
+# genes <- intersect(markers.module.ATAC$gene,markers.module.H3K27ac$gene)
+# length(genes)
+
+```
+
+```{r}
+genes <- head(genes,10)
+
+createMetaModule <- function(seurat,genes){
+  assay <- DefaultAssay(seurat)
+  colSums(seurat[[assay]]@counts[genes,])
+}
+
+
+MOL.score.ls <- lapply(seurat.oligo[1:3],function(x){
+  createMetaModule(x,genes)
+})
+```
+
+
+```{r}
+
+d <- as.data.frame(cbind('pt'      = seurat.oligo$H3K27ac$pseudotime, 
+                         'H3K27ac' = MOL.score.ls[['H3K27ac']],
+                         'ATAC    '= MOL.score.ls[['ATAC']],# ))
+                         'ident'   = as.character(seurat.oligo$H3K27ac@active.ident)))
+
+d <- d[!is.na(d$pt),]
+
+d <- reshape2::melt(data=d,id.vars=c("pt","ident"))
+d$pt     <- as.numeric(d$pt)
+d$value  <- as.numeric(d$value)
+d <- d[which(d$pt > 7),]
+
+ggplot(data=d,aes(x=pt,y=value)) + geom_jitter(aes(col=ident)) + geom_smooth(method = 'lm',formula = y~poly(x,2),aes(fill=variable,group=variable)) + facet_wrap(~variable)
+```
+
+
+
+
+
+
+

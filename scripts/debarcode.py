@@ -117,7 +117,12 @@ class bcdCT:
 
         top_barcodes = sorted(barcodes, key=barcodes.get, reverse=True)[:args.Nbarcodes]
         picked_barcodes = {key: barcodes[key] for key in top_barcodes}
-        sys.stderr.write("Detected following most abundant barcodes out of first {} barcodes:\n{}\n".format(n, picked_barcodes))
+        sys.stderr.write("\nDetected following most abundant barcodes out of first {} barcodes:\n{}\n".format(n, picked_barcodes))
+        if args.barcode != "None":
+            self.picked_barcodes = [args.barcode]
+            sys.stderr.write("Barcode specified for demultiplexing [{barcode}] in top found barcodes: {bool} \n".format(bool = args.barcode in picked_barcodes.keys(), barcode = args.barcode))
+            return
+
         self.picked_barcodes = picked_barcodes
 
 def get_read_barcode(string,index):
@@ -167,12 +172,16 @@ def main(args):
         "no_spacer_found": 0,
         "too_short_read": 0
     }
-  
+
+    sys.stderr.write("Creating file output handles \n")
     with ExitStack() as stack:
         exp.create_out_handles(stack)
         n = 0
+        sys.stderr.write("Starting demultiplexing \n")
         for read1,read2,read3 in exp:
             n+=1
+            if n % 500000 == 0:
+                sys.stderr.write("{} reads processed\n".format(n))
             assert (read1.name == read2.name == read3.name)                                                 # Make sure the fastq files are ok
 
             spacer_hit = find_seq(pattern=args.pattern,DNA_string=read2.sequence,nmismatch=2)
@@ -204,8 +213,7 @@ def main(args):
 
 
                 statistics["barcode_found"] += 1
-            if n % 500000 == 0:
-                sys.stderr.write("{} reads processed\n".format(n))
+
 
     # Write the statistics file
     with open("{0}/{1}_statistics.yaml".format(exp.out_prefix,exp.name), 'w') as f:
@@ -249,8 +257,13 @@ if __name__ == '__main__':
 
     parser.add_argument('--Nbarcodes',
                         type=int,
-                        default=2,
+                        default=3,
                         help='Number of barcodes in experiment (Default: %(default)s)')
+
+    parser.add_argument('--barcode',
+                        type=str,
+                        default='None',
+                        help='Specific barcode to be extracted [e.g. ATAGAGGC] (Default: All barcodes [see --Nbarcodes])')
 
     args = parser.parse_args()
     main(args)

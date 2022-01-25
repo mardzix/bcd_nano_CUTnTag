@@ -1,0 +1,91 @@
+include: "Snakefile_preprocess.smk"
+include: "Snakefile_single_modality.smk"
+
+configfile: workflow.basedir + '/../config/config.yaml'
+
+QC_modalities = ['H3K27ac','H3K27me3']
+
+rule all:
+    input:
+        # Download
+        expand('results/nbiotech_data/data/{data}/',data = config['nbiotech_data']['url'].keys()),
+        expand('results/nbiotech_data/bigwig/{mod}_all_fragments.bw', mod=QC_modalities),
+        expand('results/nbiotech_data/signal_matrix/top_peaks/peaks_{mod}_all_fragments.bed', mod = QC_modalities),
+        expand('results/nbiotech_data/signal_matrix/top_peaks/peaks_{mod}_shuffled_all_fragments.bed',mod = QC_modalities),
+
+
+rule download_nbiotech_data:
+    output:
+        'results/nbiotech_data/download/{data}.tar.gz',
+    params:
+        url = lambda wildcards: config['nbiotech_data']['url'][wildcards.data]
+    shell:
+        "wget -O {output} {params.url}; "
+
+rule untar_downloaded:
+    input:
+        archive = 'results/nbiotech_data/download/{data}.tar.gz'
+    output:
+        folder  = directory('results/nbiotech_data/data/{data}/')
+    shell:
+        "mkdir {output.folder}; "
+        "tar -xvzf {input.archive} -C {output.folder}"
+
+
+rule call_peaks_macs2:
+    input:
+        fragments = 'results/nbiotech_data/data/fragments/'
+    output:
+        peaks = 'results/nbiotech_data/peaks/{mod}_peaks.narrowPeak'
+    shell:
+        "macs2 callpeak -t {input.fragments}/*{wildcards.mod}* --outdir `dirname {output.peaks}` -n {wildcards.mod} --nolambda --nomodel --min-length=1000 --max-gap=1000"
+
+rule fragments_to_bw_QC:
+    input:
+        fragments   = 'results/nbiotech_data/data/fragments/',
+        chrom_sizes = 'results/mm10.chrom.sizes'
+    output:
+        bam        = temp('results/nbiotech_data/bigwig/{mod}_fragments.bam'),
+        bam_sorted = temp('results/nbiotech_data/bigwig/{mod}_fragments_sorted.bam'),
+        index      = temp('results/nbiotech_data/bigwig/{mod}_fragments_sorted.bam.bai'),
+        bigwig     = 'results/nbiotech_data/bigwig/{mod}_all_fragments.bw',
+    threads: 8
+    shell:
+        "bedToBam -i {input.fragments}/*{wildcards.mod}* -g {input.chrom_sizes} > {output.bam} && "
+        "samtools sort -@ {threads} -o {output.bam_sorted} {output.bam} &&"
+        "samtools index {output.bam_sorted} && "
+        "bamCoverage -b {output.bam_sorted} -o {output.bigwig} -p {threads} --minMappingQuality 5 --binSize 50 --smoothLength 250 --normalizeUsing RPKM --ignoreDuplicates"
+
+
+rule create_signal_matrix:
+    input:
+        peaks  = expand('results/nbiotech_data/peaks/{mod}_peaks.narrowPeak',mod = QC_modalities),
+        bigwig = expand('results/nbiotech_data/bigwig/{mod}_all_fragments.bw',mod = QC_modalities),
+    output:
+        numpy = 'results/nbiotech_data/signal_matrix/matrix.npz',
+        raw   = 'results/nbiotech_data/signal_matrix/matrix.tab',
+    shell:
+        "multiBigwigSummary BED-file -b {input.bigwig} --BED {input.peaks} -o {output.numpy} --outRawCounts {output.raw}"
+
+rule get_peaks_from_signal_matrix:
+    input:
+        matrix = 'results/nbiotech_data/signal_matrix/matrix.tab',
+        script = os.path.dirname(workflow.basedir) + '/scripts/matrix_get_specific_regions.R'
+    output:
+        'results/nbiotech_data/signal_matrix/top_peaks/peaks_H3K27ac_all_fragments.bed',
+        'results/nbiotech_data/signal_matrix/top_peaks/peaks_H3K27me3_all_fragments.bed',
+    params:
+        output = directory('results/nbiotech_data/signal_matrix/top_peaks/')
+    shell:
+        "Rscript {input.script} -i {input.matrix} -o {params.output}"
+
+rule shuffle_peaks:
+    input:
+        peaks = 'results/nbiotech_data/signal_matrix/top_peaks/peaks_{mod}_all_fragments.bed',
+        genome = "results/mm10.chrom.sizes"
+    output:
+        'results/nbiotech_data/signal_matrix/top_peaks/peaks_{mod}_shuffled_all_fragments.bed'
+    shell:
+        "bedtools shuffle -i {input.peaks} -g {input.genome} > {output}"
+
+

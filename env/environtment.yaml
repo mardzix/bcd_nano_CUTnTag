@@ -11,9 +11,32 @@ dependencies:
   - bioconda::bedtools=2.30
   - bioconda::samtools=1.14
   - bioconda::scvelo=0.2.4
+  - bioconda::sra-tools
   - conda-forge::htcondor
   - conda-forge::pandoc
+#  - conda-forge::udunits2
+#  - conda-forge::gdal
+  - bioconda::r-monocle3
+
+# Installing monocle3 is a nightmare
 
 # R packages
-# install.packages(c('argparse','ggplot2','funr','Signac','scales','Seurat','rmarkdown','mclust','GGally','BiocManager','patchwork','markdown','UpSetR','pheatmap','viridis','purrr','Rmagic'))
-# BiocManager::install(c('ensembldb','EnsDb.Mmusculus.v79','GenomeInfoDb', 'GenomicRanges', 'IRanges', 'Rsamtools','BiocGenerics','rtracklayer','limma'))
+# install.packages(c('argparse','ggplot2','funr','Signac','scales','Seurat','rmarkdown','mclust','GGally','BiocManager','patchwork','markdown','UpSetR','pheatmap','viridis','purrr','Rmagic','devtools'))
+# BiocManager::install(c('ensembldb','EnsDb.Mmusculus.v79','GenomeInfoDb', 'GenomicRanges', 'IRanges', 'Rsamtools','BiocGenerics','rtracklayer','limma','slingshot'))
+
+
+# Install monocle3 according to: https://cole-trapnell-lab.github.io/monocle3/docs/installation/
+
+# BiocManager::install(c('BiocGenerics', 'DelayedArray', 'DelayedMatrixStats',
+#                       'limma', 'S4Vectors', 'SingleCellExperiment',
+#                       'SummarizedExperiment', 'batchelor', 'Matrix.utils'))
+
+# monocle3 dependencies
+# install.packages("udunits2",configure.args = c('--with-udunits2-include=/data/proj/GCB_MB/miniconda3/envs/bcdCT/include','--with-udunits2-lib=/data/proj/GCB_MB/miniconda3/envs/bcdCT/lib'))
+
+# install.packages("devtools")
+# devtools::install_github('cole-trapnell-lab/leidenbase')
+# devtools::install_github('cole-trapnell-lab/monocle3')
+
+# devtools::install_github('cole-trapnell-lab/monocle3', ref="develop")
+# devtools::install_github("cole-trapnell-lab/cicero-release", ref = "monocle3")

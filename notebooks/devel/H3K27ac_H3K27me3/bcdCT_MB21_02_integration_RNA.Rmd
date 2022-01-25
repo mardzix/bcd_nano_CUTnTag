@@ -1,0 +1,127 @@
+---
+title: "bcdCT_MB21_02_integration_RNAseq"
+output: html_document
+params:
+  out_prefix: "/data/proj/GCB_MB/bcd_CT/single-cell/results/"
+  sample: "bcdCT_MB21_02"
+  genome: 'mm10'
+  antibody: 'H3K27ac'
+
+---
+
+```{r libraries}
+library(seurat.to.integrate)
+library(Signac)
+library(ggplot2)
+```
+
+```{r load_data}
+rna.seq <- readRDS(file='/data/proj/GCB_MB/single-cell-CUT-Tag/nbiotech_paper/analysis/results/Sten_RNA/clustering/01.clustering_20000cells.Rds')
+seurat  <- readRDS(file='/data/proj/GCB_MB/bcd_CT/single-cell/results/multiple_modalities/H3K27ac_H3K27me3/seurat_5000/Seurat_object_clustered.Rds')
+
+rna.seq$experiment <- "scRNAseq"
+seurat$experiment  <- "bcdCT"
+
+priority <- c("H3K27ac","ATAC")
+```
+
+```{r remove_nonsense}
+rna.seq <- rna.seq[,-grep("Enteric",rna.seq$TaxonomyRank4)]
+rna.seq <- rna.seq[,-grep("Peripheral",rna.seq$TaxonomyRank4)]
+```
+
+```{r}
+seurat.to.integrate <- seurat[['H3K27ac']]
+```
+
+
+```{r assay_common_features}
+integration_modality <- priority[min(which(priority %in% names(seurat)))]
+cat("*** Modality to use for integration:",integration_modality,"\n")
+
+integration_assay    <- "GA"
+cat("*** Assay to use for integration:",integration_assay,"\n")
+
+seurat.to.integrate               <- seurat[[integration_modality]]
+DefaultAssay(seurat.to.integrate) <- integration_assay
+
+head(rownames(seurat.to.integrate))
+head(rownames(rna.seq))
+
+common.features <- table(c(rownames(seurat.to.integrate),rownames(rna.seq)))
+common.features <- names(common.features[common.features==2])
+head(common.features)
+length(common.features)
+```
+
+```{r integrate}
+transfer.anchors <- FindTransferAnchors(
+  reference = rna.seq,
+  query = seurat.to.integrate,
+  reduction = 'cca',
+  query.assay = integration_assay,reference.assay = 'RNA',
+  features = common.features
+)
+
+
+genes.use <- VariableFeatures(rna.seq)
+refdata <- GetAssayData(rna.seq, assay = "RNA", slot = "data")[genes.use, ]
+
+imputation <- TransferData(anchorset = transfer.anchors, refdata = refdata, weight.reduction = seurat.to.integrate[["lsi"]],dims = 2:50)
+
+seurat.to.integrate[['RNA']] <- imputation
+coembed <- merge(x =rna.seq , y = seurat.to.integrate)
+
+coembed <- ScaleData(coembed, features = genes.use, do.scale = FALSE)
+coembed <- RunPCA(coembed, features = genes.use, verbose = FALSE)
+coembed <- RunUMAP(coembed, dims = 1:30)
+
+```
+
+```{r plot, fig.width=20,fig.height=8}
+p1 <- DimPlot(seurat.to.integrate,pt.size=0.4,repel=TRUE,label=TRUE) + NoLegend() + ggtitle('multimodal CUT&Tag un-integrated')
+p2 <- DimPlot(rna.seq,label=TRUE,repel=TRUE,pt.size=0.2,group.by="TaxonomyRank4") + NoLegend() + ggtitle('mouse brain atlas scRNA-seq un-integrated')
+
+p3 <- DimPlot(coembed[,coembed$orig.ident != 'bcdCT'],group.by='TaxonomyRank3',label=TRUE,pt.size = 0.2,repel = TRUE,) + NoLegend()
+p4 <- DimPlot(coembed[,coembed$orig.ident == 'bcdCT'],label=TRUE,pt.size=0.2) + NoLegend()
+p5 <- DimPlot(coembed[,coembed$orig.ident != 'bcdCT'],group.by='TaxonomyRank4',label=TRUE,pt.size = 0.2,repel=TRUE) + NoLegend()
+p6 <- DimPlot(coembed[,coembed$orig.ident != 'bcdCT'],group.by='ClusterName',label=TRUE,pt.size = 0.2,repel=TRUE) + NoLegend()
+
+p1+p2
+p3 + p5 + p4
+p4+p6
+DimPlot(coembed,group.by='experiment')
+
+```
+
+
+```{r}
+seurat.to.integrate <- RenameIdents(seurat.to.integrate,
+                       list('0'="Vascular endothelial",
+                            '1'='Astrocytes_1',
+                            '2'='Neurons_1',
+                            '3'='Astrocytes_2',
+                            '4'='Neurons_2',
+                            '5'='mOL',
+                            '6'='Immune_micoglia',
+                            '7'='OEC',
+                            '8'='VLMC',
+                            '9'='OPC-COP',
+                            '10'='Neurons_3',
+                            '11'='Astrocytes_3',
+                            '12'='Pericytes',
+                            '13'='Astrocytes_4_new',
+                            '14'='Radial_glia_ependymal',
+                            '15'='Neurons_4',
+                            '16'='Choroid_plexus'))
+
+
+DimPlot(seurat.to.integrate,pt.size = 0.2,label=TRUE,repel=TRUE) + NoLegend()
+```
+
+
+
+```{r}
+saveRDS(object = coembed,)
+```
+
