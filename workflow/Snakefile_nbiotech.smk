@@ -13,12 +13,10 @@ shell.prefix("source ~/.bash_profile; conda activate " + config['general']['cond
 
 rename_fastq_dic = {"R1": "2", "R2": "3", "R3": "4", "R4": "1"}
 
-localrules: nbiotech_fastq_dump
-
 rule nbiotech_all:
     input:
-        expand('results/nbiotech_data/cellranger/{sample}/outs/possorted_bam.bam', sample= samples_list),
-        expand('results/nbiotech_data/{sample}/seurat/bin_{binwidth}/Seurat_object.Rds', sample = samples_list,binwidth=5000)
+        expand('results/nbiotech_data/cellranger/{sample}/outs/possorted_bam.bam', sample= samples_list_nbiotech),
+        expand('results/nbiotech_data/{sample}/seurat/bin_{binwidth}/Seurat_object.Rds', sample = samples_list_nbiotech,binwidth=5000)
 
 rule nbiotech_fastq_dump:
     output:
@@ -26,7 +24,7 @@ rule nbiotech_fastq_dump:
         "results/nbiotech_data/cellranger/fastq/{sample}/{SRA}_2.fastq",
         "results/nbiotech_data/cellranger/fastq/{sample}/{SRA}_3.fastq",
         "results/nbiotech_data/cellranger/fastq/{sample}/{SRA}_4.fastq",
-    threads: 10
+    threads: 1
     params:
         tmp = config['general']['tempdir'],
         out = "results/nbiotech_data/cellranger/fastq/{sample}/{SRA}.fastq",

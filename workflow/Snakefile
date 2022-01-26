@@ -3,7 +3,7 @@ configfile: workflow.basedir + '/../config/config.yaml'
 include: 'Snakefile_prep.smk'
 include: 'Snakefile_preprocess.smk'
 include: 'Snakefile_single_modality.smk'
-include: 'Snakefile_pre_nbiotech.smk'
+include: 'Snakefile_nbiotech.smk'
 
 samples_list  = list(config['samples'].keys())
 barcodes_dict = {sample: config['samples'][sample]['barcodes'] for sample in samples_list}
