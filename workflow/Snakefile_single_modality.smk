@@ -26,7 +26,8 @@ rule all_single_modality:
         expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/markers/{idents}/markers.csv', modality = antibodies_list, feature = 'peaks', idents = ['idents_L1','idents_L2','idents_L3','seurat_clusters']),
         # Bam files
         # ['results/{sample}/{antibody}_{barcode}/bam/possorted_bam_sampleID.bam'.format(sample=sample,antibody=antibody,barcode=barcodes_dict[sample][antibody]) for sample in samples_list  for antibody in barcodes_dict[sample].keys()],
-        expand('results/multimodal_data/single_modality/{modality}/bam/possorted_bam_sampleID.bam',modality = antibodies_list)
+        expand('results/multimodal_data/single_modality/{modality}/bam/possorted_bam_sampleID.bam',modality = antibodies_list),
+        expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/bam_per_cluster/{ident}/bam/',modality=antibodies_list,feature='peaks',ident=['idents_L1','idents_L2','idents_L3','seurat_clusters'])
 
 rule integrate_with_scRNA:
     input:
@@ -79,12 +80,12 @@ rule find_markers:
 
 rule export_cluster_barcode_table:
     input:
-        seurat = 'results/single_modality/{modality}/seurat/{feature}/Seurat_object_clustered_renamed.Rds',
+        seurat = 'results/multimodal_data/single_modality/{modality}/seurat/{feature}/Seurat_object_clustered_renamed.Rds',
         script = workflow_dir + '/scripts/export_cluster_barcode_table.R'
     output:
-        csv = 'results/single_modality/{modality}/seurat/{feature}/cluster_barcode_table.csv',
+        csv = 'results/multimodal_data/single_modality/{modality}/seurat/{feature}/bam_per_cluster/{ident}/cluster_barcode_table.csv',
     shell:
-        "Rscript {input.script} -i {input.seurat} -o {output.csv}"
+        "Rscript {input.script} -i {input.seurat} -o {output.csv} -d {wildcards.ident}"
 
 rule add_sampleID_to_bam:
     input:
@@ -117,7 +118,10 @@ rule merge_bam_accross_samples:
 
 rule export_bam_per_cluster:
     input:
-        bam   = 'results/multimodal_data/single_modality/{modality}/bam/possorted_bam_sampleID.bam',
-        table = 'results/single_modality/{modality}/seurat/{feature}/cluster_barcode_table.csv'
+        bam    = 'results/multimodal_data/single_modality/{modality}/bam/possorted_bam_sampleID.bam',
+        table  = 'results/multimodal_data/single_modality/{modality}/seurat/{feature}/bam_per_cluster/{ident}/cluster_barcode_table.csv',
+        script = workflow_dir + '/scripts/filter_bam_by_barcode.py'
     output:
-        'results/multimodal_data/single_modality/{modality}/seurat/peaks/bam_per_cluster/{idents}',
+        bam_files = directory('results/multimodal_data/single_modality/{modality}/seurat/{feature}/bam_per_cluster/{ident}/bam/'),
+    shell:
+        "python3 {input.script} {input.bam} {input.table} NA {output.bam_files}"

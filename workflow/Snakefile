@@ -23,4 +23,5 @@ rule all:
         expand('results/nbiotech_data/{sample}/seurat/bin_{binwidth}/Seurat_object.Rds', sample=samples_list_nbiotech, binwidth=5000),
 
         # bam files new
-        expand('results/multimodal_data/single_modality/{modality}/bam/possorted_bam_sampleID.bam',modality = antibodies_list)
+        expand('results/multimodal_data/single_modality/{modality}/bam/possorted_bam_sampleID.bam',modality = antibodies_list),
+        expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/bam_per_cluster/{ident}/bam/',modality=antibodies_list,feature='peaks',ident=['idents_L1','idents_L2','idents_L3','seurat_clusters'])
