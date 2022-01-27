@@ -7,6 +7,8 @@ params:
   out_prefix: "/data/proj/GCB_MB/bcd_CT/single-cell/results/"
   modality: "H3K27me3"
   feature: "peaks"
+  input: "results/multimodal_data/single_modality/H3K27me3/seurat/peaks/Seurat_object_clustered.Rds"
+  output: "results/multimodal_data/single_modality/H3K27me3/seurat/peaks/Seurat_object_clustered_renamed.Rds"
 ---
 
 ```{r setup, include=FALSE}
@@ -22,7 +24,8 @@ set.seed(1234)
 ```
 
 ```{r load_data}
-seurat <- readRDS(file=paste0(params$out_prefix,'/single_modality/',params$modality,'/seurat/',params$feature,'/Seurat_object_clustered.Rds'))
+#seurat <- readRDS(file=paste0(params$out_prefix,'/multimodal_data/single_modality/',params$modality,'/seurat/',params$feature,'/Seurat_object_clustered.Rds'))
+seurat <- readRDS(file=params$input)
 DimPlot(seurat,label=TRUE)
 ```
 
@@ -230,12 +233,12 @@ p1+p2+p3+p4
 ```{r}
 lapply(c('idents_L1','idents_L2','idents_L3','seurat_clusters'),function(x){
   p1 <- DimPlot(seurat.renamed, label=TRUE,group.by=x,repel=TRUE) + NoLegend()
-  ggsave(plot=p1, filename=paste0(params$out_prefix,'/single_modality/',params$modality,'/seurat/',params$feature,'/Seurat_UMAP_',x,'.pdf'),width=12,height=12)
+  ggsave(plot=p1, filename=paste0(dirname(params$output),'UMAP_',x,'.png'),width=12,height=12)
 })
 ```
 
 ```{r}
-saveRDS(object = seurat.renamed, file = paste0(params$out_prefix,'/single_modality/',params$modality,'/seurat/',params$feature,'/Seurat_object_clustered_renamed.Rds'))
+saveRDS(object = seurat.renamed, file = params$output)
 ```
 
 

@@ -44,11 +44,11 @@ rule run_cellranger:
         meta = 'results/multimodal_data/{sample}/cellranger/{sample}_{antibody}_{barcode}/outs/singlecell.csv',
     params:
         cellranger_ref = config['general']['cellranger_ref'],
-        fastq_folder   = lambda wildcards: os.getcwd() + '/results/fastq_per_barcode/{sample}/{antibody}_{barcode}/barcode_{barcode}/'.format(sample=wildcards.sample, antibody=wildcards.antibody, barcode=wildcards.barcode)
+        fastq_folder   = lambda wildcards: os.getcwd() + '/results/multimodal_data/{sample}/fastq_per_barcode/{antibody}_{barcode}/barcode_{barcode}/'.format(sample=wildcards.sample, antibody=wildcards.antibody, barcode=wildcards.barcode)
     threads: 40
     shell:
-        'rm -r results/{wildcards.sample}/cellranger/{wildcards.sample}_{wildcards.antibody}_{wildcards.barcode}/; '
-        'cd results/{wildcards.sample}/cellranger/; '
+        'rm -r results/multimodal_data/{wildcards.sample}/cellranger/{wildcards.sample}_{wildcards.antibody}_{wildcards.barcode}/; '
+        'cd results/multimodal_data/{wildcards.sample}/cellranger/; '
         '/data/bin/cellranger-atac count --id {wildcards.sample}_{wildcards.antibody}_{wildcards.barcode} --reference {params.cellranger_ref} --fastqs {params.fastq_folder}'
 
 rule bam_to_bw:

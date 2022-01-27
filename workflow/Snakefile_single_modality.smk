@@ -41,14 +41,18 @@ rule cluster_final_and_rename:
         seurat   = 'results/multimodal_data/single_modality/{modality}/seurat/{feature}/Seurat_object_clustered.Rds',
         notebook =  workflow_dir + '/notebooks/single_modality/{modality}_rename_clusters.Rmd',
     output:
-        'results/multimodal_data/single_modality/{modality}/seurat/{feature}/Seurat_object_clustered_renamed.Rds'
+        seurat   = 'results/multimodal_data/single_modality/{modality}/seurat/{feature}/Seurat_object_clustered_renamed.Rds'
     params:
         report     = os.getcwd() + '/results/multimodal_data/single_modality/{modality}/seurat/{feature}/Seurat_object_clustered_renamed.html',
-        out_prefix = os.getcwd() + '/results/'
+        out_prefix = os.getcwd() + '/',
     shell:
-        "Rscript -e \"rmarkdown::render(input='{input.notebook}',\
-                                        output_file = '{params.report}', \
-                                        params=list(out_prefix = '{params.out_prefix}',modality = '{wildcards.modality}', feature = '{wildcards.feature}'))\" "
+        "Rscript -e \"rmarkdown::render(input='{input.notebook}', "
+        "                                output_file = '{params.report}', "
+        "                                params=list(out_prefix = '{params.out_prefix}', "
+        "                                           modality = '{wildcards.modality}', "
+        "                                           feature = '{wildcards.feature}', "
+        "                                           input = '{params.out_prefix}{input.seurat}', "
+        "                                           output = '{params.out_prefix}{output.seurat}'))\" "
 
 
 rule export_bw:
