@@ -20,7 +20,8 @@ parser$add_argument("-o", "--output_folder", type="character", default='foo',
                     help="output folder")
 parser$add_argument("-d", "--idents", type="character", default='active.ident',
                     help="identities to use for export")
-
+parser$add_argument("-g", "--genome", type="character", default='mm10',
+                    help="genome version to be used [e.g. mm10]")
 args <- parser$parse_args()
 
 ###################
@@ -32,7 +33,7 @@ args <- parser$parse_args()
 cat("*** Loading data \n")
 seurat_object <- readRDS(file=args$input)
 
-chrom.sizes <- getChromInfoFromUCSC('mm10',assembled.molecules.only=TRUE)
+chrom.sizes <- getChromInfoFromUCSC(args$genome,assembled.molecules.only=TRUE)
 fragments <- read.delim(gzfile(args$fragments),sep='\t',row.names=NULL,header=FALSE)
 fragments <- GRanges(seqnames=fragments$V1, ranges = IRanges(start=fragments$V2,end=fragments$V3),name=fragments$V4, score=fragments$V5)
 

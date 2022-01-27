@@ -233,7 +233,7 @@ p1+p2+p3+p4
 ```{r}
 lapply(c('idents_L1','idents_L2','idents_L3','seurat_clusters'),function(x){
   p1 <- DimPlot(seurat.renamed, label=TRUE,group.by=x,repel=TRUE) + NoLegend()
-  ggsave(plot=p1, filename=paste0(dirname(params$output),'UMAP_',x,'.png'),width=12,height=12)
+  ggsave(plot=p1, filename=paste0(dirname(params$output),'/UMAP_',x,'.png'),width=12,height=12)
 })
 ```
 

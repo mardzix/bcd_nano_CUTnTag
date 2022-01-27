@@ -19,7 +19,8 @@ parser$add_argument("-o", "--output_file", type="character", default='foo',
                     help="output folder")
 parser$add_argument("-d", "--idents", type="character", default='active.ident',
                     help="identities to use for markers")
-
+parser$add_argument("-g", "--genome", type="character", default='mm10',
+                    help="genome version to be used [e.g. mm10]")
 args <- parser$parse_args()
 
 ###################

@@ -20,5 +20,7 @@ rule all:
         expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/markers/{idents}/markers.csv',modality=antibodies_list,feature='peaks',idents=['idents_L1', 'idents_L2', 'idents_L3', 'seurat_clusters']),
 
         # nbiotech data
-        expand('results/nbiotech_data/{sample}/seurat/bin_{binwidth}/Seurat_object.Rds', sample= samples_list_nbiotech, binwidth=5000)
+        expand('results/nbiotech_data/{sample}/seurat/bin_{binwidth}/Seurat_object.Rds', sample=samples_list_nbiotech, binwidth=5000),
 
+        # bam files new
+        expand('results/multimodal_data/single_modality/{modality}/bam/possorted_bam_sampleID.bam',modality = antibodies_list)

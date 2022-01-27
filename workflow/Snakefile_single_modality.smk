@@ -24,6 +24,9 @@ rule all_single_modality:
         expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/Seurat_object_clustered_renamed.Rds',modality = antibodies_list, feature = 'peaks'), # TODO: use 'peaks' as variable
         expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/bigwig/{idents}/', modality = antibodies_list, feature = 'peaks', idents = ['idents_L1','idents_L2','idents_L3','seurat_clusters']), # TODO: use 'peaks' and idents as variable
         expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/markers/{idents}/markers.csv', modality = antibodies_list, feature = 'peaks', idents = ['idents_L1','idents_L2','idents_L3','seurat_clusters']),
+        # Bam files
+        # ['results/{sample}/{antibody}_{barcode}/bam/possorted_bam_sampleID.bam'.format(sample=sample,antibody=antibody,barcode=barcodes_dict[sample][antibody]) for sample in samples_list  for antibody in barcodes_dict[sample].keys()],
+        expand('results/multimodal_data/single_modality/{modality}/bam/possorted_bam_sampleID.bam',modality = antibodies_list)
 
 rule integrate_with_scRNA:
     input:
@@ -73,3 +76,48 @@ rule find_markers:
         markers = 'results/multimodal_data/single_modality/{modality}/seurat/{feature}/markers/{idents}/markers.csv',
     shell:
         "Rscript {input.script} -i {input.seurat} -o {output.markers} --idents {wildcards.idents}"
+
+rule export_cluster_barcode_table:
+    input:
+        seurat = 'results/single_modality/{modality}/seurat/{feature}/Seurat_object_clustered_renamed.Rds',
+        script = workflow_dir + '/scripts/export_cluster_barcode_table.R'
+    output:
+        csv = 'results/single_modality/{modality}/seurat/{feature}/cluster_barcode_table.csv',
+    shell:
+        "Rscript {input.script} -i {input.seurat} -o {output.csv}"
+
+rule add_sampleID_to_bam:
+    input:
+        bam = 'results/multimodal_data/{sample}/cellranger/{sample}_{antibody}_{barcode}/outs/possorted_bam.bam', \
+        script = workflow_dir + '/scripts/add_sampleID_to_bam.py'
+    output:
+        bam = temp('results/multimodal_data/{sample}/{antibody}_{barcode}/bam/possorted_bam_sampleID.bam'),
+    shell:
+        "python3 {input.script} {input.bam} {wildcards.sample} {output.bam}"
+
+
+def get_bamfiles_per_modality(modality, barcodes_dict):
+    bam_files = []
+    for sample in barcodes_dict.keys():
+        if modality in barcodes_dict[sample].keys():
+            bam = 'results/multimodal_data/{sample}/{modality}_{barcode}/bam/possorted_bam_sampleID.bam'.format(sample=sample,modality=modality,barcode=
+            barcodes_dict[sample][modality])
+            bam_files.append(bam)
+    return bam_files
+
+
+rule merge_bam_accross_samples:
+    input:
+        bam=lambda wildcards: get_bamfiles_per_modality(wildcards.modality,barcodes_dict=barcodes_dict)
+    output:
+        bam='results/multimodal_data/single_modality/{modality}/bam/possorted_bam_sampleID.bam',
+    threads: 8
+    shell:
+        "samtools merge -@ {threads} {output.bam} {input.bam}"
+
+rule export_bam_per_cluster:
+    input:
+        bam   = 'results/multimodal_data/single_modality/{modality}/bam/possorted_bam_sampleID.bam',
+        table = 'results/single_modality/{modality}/seurat/{feature}/cluster_barcode_table.csv'
+    output:
+        'results/multimodal_data/single_modality/{modality}/seurat/peaks/bam_per_cluster/{idents}',
