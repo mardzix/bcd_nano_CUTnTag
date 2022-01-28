@@ -25,7 +25,7 @@ for line in open(barcode_annotations,'r'):
 
 # Iterate over clusters and generate list of paths for output files
 clusters = list(set(clusters_dic.values()))
-clusters_outfiles = {x: out_prefix + x + "_out.bam" for x in clusters}
+clusters_outfiles = {x: out_prefix + x.replace(" ","_") + ".bam" for x in clusters}
 
 sys.stderr.write("*** Found following clusters in cluster - barcode file ***\n")
 sys.stderr.write("\n".join(clusters) + "\n\n")
