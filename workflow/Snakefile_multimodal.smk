@@ -3,12 +3,12 @@ include: "Snakefile_single_modality.smk"
 
 def get_input_for_multiple_modalities_merge(combination, feature):
     combination = combination.split("_")
-    files = ["results/single_modality/{modality}/seurat/{feature}/Seurat_object.Rds".format( modality = modality, feature = feature) for modality in combination]
+    files = ["results/multimodal_data/single_modality/{modality}/seurat/{feature}/Seurat_object_clustered_renamed.Rds".format( modality = modality, feature = feature) for modality in combination]
     return files
 
 rule all_multimodal:
     input:
-        [expand('results/multiple_modalities/{combination}/seurat_multimodal/bin_{feature}/Seurat_object.Rds', combination="_".join(combination),feature=config['general']['binwidth']) for combination in modalities_combinations],
+       # [expand('results/multiple_modalities/{combination}/seurat_multimodal/bin_{feature}/Seurat_object.Rds', combination="_".join(combination),feature=config['general']['binwidth']) for combination in modalities_combinations],
         [expand('results/multiple_modalities/{combination}/seurat_multimodal/{feature}/Seurat_object.Rds', combination="_".join(combination), feature = ['peaks']) for combination in modalities_combinations]
 
 rule merged_multiple_modalities:

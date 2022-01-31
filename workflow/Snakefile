@@ -4,6 +4,7 @@ include: 'Snakefile_prep.smk'
 include: 'Snakefile_preprocess.smk'
 include: 'Snakefile_single_modality.smk'
 include: 'Snakefile_pre_nbiotech.smk'
+include: 'Snakefile_multimodal.smk'
 
 samples_list  = list(config['samples'].keys())
 barcodes_dict = {sample: config['samples'][sample]['barcodes'] for sample in samples_list}
@@ -19,8 +20,10 @@ rule all:
         expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/Seurat_object_clustered_renamed.Rds',modality=antibodies_list,feature='peaks'),# TODO: use 'peaks' as variable
         expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/bigwig/{idents}/',modality=antibodies_list,feature='peaks',idents=['idents_L1', 'idents_L2', 'idents_L3', 'seurat_clusters']),# TODO: use 'peaks' and idents as variable
         expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/markers/{idents}/markers.csv',modality=antibodies_list,feature='peaks',idents=['idents_L1', 'idents_L2', 'idents_L3', 'seurat_clusters']),
-        expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/markers/idents_L3_in_L1_niches/markers.csv',modality = antibodies_list, feature = 'peaks'),
+        expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/L3_niche_markers2/L3_markers.csv',modality = antibodies_list, feature = 'peaks'),
 
+        # Multimodal data
+        [expand('results/multiple_modalities/{combination}/seurat_multimodal/{feature}/Seurat_object.Rds', combination="_".join(combination), feature = ['peaks']) for combination in modalities_combinations],
 
         # nbiotech data
         expand('results/nbiotech_data/{sample}/seurat/bin_{binwidth}/Seurat_object.Rds', sample=samples_list_nbiotech, binwidth=5000),

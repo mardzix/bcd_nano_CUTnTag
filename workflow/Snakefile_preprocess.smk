@@ -20,6 +20,34 @@ rule all_preprocess:
         seurat_object       = expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/Seurat_object.Rds',modality=antibodies_list,feature=features),# Seurat object peaks
         seurat_clustered    = expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/Seurat_object_clustered.Rds',modality=antibodies_list,feature=features),
 
+def get_peaks_file_from_modality(sample,modality,barcode):
+    if modality == "ATAC":
+        # Cellranger default peak calling
+        peaks = "results/multimodal_data/{sample}/cellranger/{sample}_{modality}_{barcode}/outs/peaks.bed".format(sample=sample, modality=modality, barcode=barcode)
+    elif modality == "H3K27ac":
+        # Broad peaks
+        peaks = 'results/multimodal_data/{sample}/{modality}_{barcode}/peaks/macs_broad/{modality}_peaks.broadPeak'.format(sample=sample, modality=modality, barcode=barcode)
+    elif modality == "H3K27me3":
+        # Broad peaks
+        peaks = 'results/multimodal_data/{sample}/{modality}_{barcode}/peaks/macs_broad/{modality}_peaks.broadPeak'.format(sample=sample, modality=modality, barcode=barcode)
+    else:
+        peaks = 'results/multimodal_data/{sample}/{modality}_{barcode}/peaks/macs_broad/{modality}_peaks.broadPeak'.format(sample=sample, modality=modality, barcode=barcode)
+    return peaks
+
+def get_fragments_per_modality(modality, barcodes_dict):
+    result = []
+    for s in barcodes_dict:
+        for m in barcodes_dict[s]:
+            if modality == m:
+               result.append('results/{sample}/{modality}_{barcode}/fragments/fragments.tsv.gz'.format(sample = s, modality = m, barcode=barcodes_dict[s][m]))
+    return result
+def get_seurat_per_modality(modality, barcodes_dict,feature):
+    result = []
+    for s in barcodes_dict:
+        for m in barcodes_dict[s]:
+            if modality == m:
+               result.append('results/{sample}/{modality}_{barcode}/seurat/{feature}/Seurat_object.Rds'.format(sample = s, modality = m, barcode=barcodes_dict[s][m], feature = feature))
+    return result
 rule demultiplex:
     input:
         script = workflow_dir + '/scripts/debarcode.py',
@@ -39,9 +67,10 @@ rule run_cellranger:
         # Uses non-demultiplexed fastq files to figure out the seq id
         lambda wildcards: get_fastq_for_cellranger(config['samples'][wildcards.sample]['fastq_path'],sample=wildcards.sample,antibody=wildcards.antibody,barcode=wildcards.barcode)
     output:
-        bam  = 'results/multimodal_data/{sample}/cellranger/{sample}_{antibody}_{barcode}/outs/possorted_bam.bam',
-        frag = 'results/multimodal_data/{sample}/cellranger/{sample}_{antibody}_{barcode}/outs/fragments.tsv.gz',
-        meta = 'results/multimodal_data/{sample}/cellranger/{sample}_{antibody}_{barcode}/outs/singlecell.csv',
+        bam   = 'results/multimodal_data/{sample}/cellranger/{sample}_{antibody}_{barcode}/outs/possorted_bam.bam',
+        frag  = 'results/multimodal_data/{sample}/cellranger/{sample}_{antibody}_{barcode}/outs/fragments.tsv.gz',
+        meta  = 'results/multimodal_data/{sample}/cellranger/{sample}_{antibody}_{barcode}/outs/singlecell.csv',
+        peaks = 'results/multimodal_data/{sample}/cellranger/{sample}_{antibody}_{barcode}/outs/peaks.bed',
     params:
         cellranger_ref = config['general']['cellranger_ref'],
         fastq_folder   = lambda wildcards: os.getcwd() + '/results/multimodal_data/{sample}/fastq_per_barcode/{antibody}_{barcode}/barcode_{barcode}/'.format(sample=wildcards.sample, antibody=wildcards.antibody, barcode=wildcards.barcode)
@@ -136,10 +165,10 @@ rule add_barcode_fragments:
 
 rule barcode_overlap_peaks:
     input:
-        bam    = 'results/multimodal_data/{sample}/cellranger/{sample}_{antibody}_{barcode}/outs/possorted_bam.bam',
-        peaks  = 'results/multimodal_data/{sample}/{antibody}_{barcode}/peaks/macs_broad/{antibody}_peaks.broadPeak',
+        bam    = 'results/multimodal_data/{sample}/cellranger/{sample}_{modality}_{barcode}/outs/possorted_bam.bam',
+        peaks  = lambda wildcards: get_peaks_file_from_modality(wildcards.sample,wildcards.modality,wildcards.barcode),
     output:
-        overlap = 'results/multimodal_data/{sample}/{antibody}_{barcode}/barcode_metrics/peaks_barcodes.txt'
+        overlap = 'results/multimodal_data/{sample}/{modality}_{barcode}/barcode_metrics/peaks_barcodes.txt'
     params:
         get_cell_barcode     = workflow_dir + '/scripts/get_cell_barcode.awk',
         add_sample_to_list   = workflow_dir + '/scripts/add_sample_to_list.py',
@@ -196,19 +225,20 @@ rule create_seurat_object_bins:
     shell:
         "Rscript {input.script} --sample {wildcards.sample}   --antibody {wildcards.antibody} --metadata {input.metadata} --fragments {input.fragments} --out_prefix {params.out_prefix} --window {wildcards.binwidth} --genome_version {params.genome}"
 
+
 rule create_seurat_object_peaks:
     input:
-        fragments = 'results/multimodal_data/{sample}/{antibody}_{barcode}/fragments/fragments.tsv.gz',
-        metadata  = 'results/multimodal_data/{sample}/{antibody}_{barcode}/cell_picking/metadata.csv',
-        peaks     = 'results/multimodal_data/{sample}/{antibody}_{barcode}/peaks/macs_broad/{antibody}_peaks.broadPeak',
+        fragments = 'results/multimodal_data/{sample}/{modality}_{barcode}/fragments/fragments.tsv.gz',
+        metadata  = 'results/multimodal_data/{sample}/{modality}_{barcode}/cell_picking/metadata.csv',
+        peaks     = lambda wildcards: get_peaks_file_from_modality(wildcards.sample, wildcards.modality, wildcards.barcode),
         script    = workflow_dir + '/scripts/create_seurat_object.R',
     output:
-        'results/multimodal_data/{sample}/{antibody}_{barcode}/seurat/peaks/Seurat_object.Rds',
+        'results/multimodal_data/{sample}/{modality}_{barcode}/seurat/peaks/Seurat_object.Rds',
     params:
-        out_prefix  = 'results/multimodal_data/{sample}/{antibody}_{barcode}/seurat/peaks/',
+        out_prefix  = 'results/multimodal_data/{sample}/{modality}_{barcode}/seurat/peaks/',
         genome      = config['general']['genome'],
     shell:
-        "Rscript {input.script} --sample {wildcards.sample}   --antibody {wildcards.antibody} --metadata {input.metadata} --fragments {input.fragments} " \ 
+        "Rscript {input.script} --sample {wildcards.sample}   --antibody {wildcards.modality} --metadata {input.metadata} --fragments {input.fragments} " \ 
         " --peaks {input.peaks} --out_prefix {params.out_prefix} --genome_version {params.genome}"
 
 

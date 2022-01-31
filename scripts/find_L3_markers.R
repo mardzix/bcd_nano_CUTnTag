@@ -24,22 +24,26 @@ seurat   <- readRDS(args$input)
 markers     <- list()
 markers.top <- list()
 
-DefaultAssay(seurat) <- 'peaks'
+# DefaultAssay(seurat) <- 'peaks'
 
 for(identity in levels(seurat$idents_L1)){
   seurat.small              <- seurat[,seurat$idents_L1==identity]
-  seurat.small              <- SetIdent(object = seurat.small,cells = names(seurat.small$idents_L3),value = seurat.small$idents_L3)
-  markers.small             <- FindAllMarkers(seurat.small)
-  markers.small$L1_identity <- identity
-  markers[[identity]]       <- markers.small
-  markers.top[[identity]]   <- markers.small %>% group_by(cluster) %>% filter(avg_log2FC > 0) %>% top_n(n=50,wt = -p_val_adj)
+  Idents(seurat.small)      <- seurat.small$idents_L3
+  if (!length(levels(seurat.small@active.ident)) == 1){
+    markers.small             <- FindAllMarkers(seurat.small,min.diff.pct = 0.05,test.use='LR',latent.vars = 'peak_MB')
+    markers.small$L1_identity <- identity
+    markers[[identity]]       <- markers.small
+    markers.top[[identity]]   <- markers.small %>% group_by(cluster) %>% filter(avg_log2FC > 0) %>% top_n(n=50,wt = -p_val_adj)
+  }
 }
+
+# markers.deseq <- FindAllMarkers(seurat.small)
 
 markers.out      <- purrr::reduce(markers,rbind)
 markers.top.out  <- purrr::reduce(markers.top,rbind)
 
-write.csv(file=args$output)
-write.csv(file=gsub(pattern = ".csv",replacement = "_top.csv",x = args$output))
+write.csv(file=args$output,x=markers.out)
+write.csv(file=gsub(pattern = ".csv",replacement = "_top.csv",x = args$output),x = markers.top.out)
 
 
 

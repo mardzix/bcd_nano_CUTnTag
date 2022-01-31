@@ -38,7 +38,7 @@ if(args$idents != 'active.ident'){
 
 
 cat("*** Finding markers \n")
-markers <- FindAllMarkers(seurat)
+markers <- FindAllMarkers(seurat,min.diff.pct = 0.05,test.use='LR',latent.vars = 'peak_MB')
 
 genes        <- load_ensembl_annot(args$genome)
 closest_gene <- ClosestFeature(object = seurat, regions = StringToGRanges(markers$gene),genes)
@@ -46,9 +46,6 @@ closest_gene <- ClosestFeature(object = seurat, regions = StringToGRanges(marker
 markers               <- markers[markers$gene %in% closest_gene$query_region,]
 closest_gene          <- setNames(closest_gene$name,closest_gene$query_region)
 markers$closest_gene  <- closest_gene[markers$gene]
-
-# SetNames(closest_gene$name,closest_gene$query_region)
-
 
 markers          <- markers[markers$p_val_adj < 0.05,]
 markers.positive <- markers[markers$avg_log2FC > 0,  ]
