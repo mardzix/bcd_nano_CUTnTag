@@ -24,6 +24,7 @@ rule all_single_modality:
         expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/Seurat_object_clustered_renamed.Rds',modality = antibodies_list, feature = 'peaks'), # TODO: use 'peaks' as variable
         expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/bigwig/{idents}/', modality = antibodies_list, feature = 'peaks', idents = ['idents_L1','idents_L2','idents_L3','seurat_clusters']), # TODO: use 'peaks' and idents as variable
         expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/markers/{idents}/markers.csv', modality = antibodies_list, feature = 'peaks', idents = ['idents_L1','idents_L2','idents_L3','seurat_clusters']),
+        expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/markers/idents_L3_in_L1_niches/markers.csv', modality = antibodies_list, feature = 'peaks'),
         # Bam files
         # ['results/{sample}/{antibody}_{barcode}/bam/possorted_bam_sampleID.bam'.format(sample=sample,antibody=antibody,barcode=barcodes_dict[sample][antibody]) for sample in samples_list  for antibody in barcodes_dict[sample].keys()],
         expand('results/multimodal_data/single_modality/{modality}/bam/possorted_bam_sampleID.bam',modality = antibodies_list),
@@ -78,6 +79,15 @@ rule find_markers:
         markers = 'results/multimodal_data/single_modality/{modality}/seurat/{feature}/markers/{idents}/markers.csv',
     shell:
         "Rscript {input.script} -i {input.seurat} -o {output.markers} --idents {wildcards.idents}"
+
+rule find_L3_markers:
+    input:
+        seurat = 'results/multimodal_data/single_modality/{modality}/seurat/{feature}/Seurat_object_clustered_renamed.Rds',
+        script = workflow_dir + '/scripts/find_L3_markers.R'
+    output:
+        'results/multimodal_data/single_modality/{modality}/seurat/{feature}/markers/idents_L3_in_L1_niches/L3_markers.csv'
+    shell:
+        'Rscript {input.script} -i {input.seurat} -o {output}'
 
 rule export_cluster_barcode_table:
     input:
