@@ -80,17 +80,78 @@ DimPlot(seurat,label=TRUE) + NoLegend()
 ```
 
 
-```{r helper, fig.width=24,fig.height=8, eval=FALSE}
-seurat.H3K27ac <- readRDS(file=paste0(params$out_prefix,'/single_modality/','H3K27ac','/seurat/',params$feature,'/Seurat_object_clustered_renamed.Rds'))
+```{r helper, fig.width=12,fig.height=6, eval=FALSE}
+seurat.H3K27ac <- readRDS(file=paste0(params$out_prefix,'/multimodal_data/single_modality/','H3K27ac','/seurat/',params$feature,'/Seurat_object_clustered_renamed.Rds'))
 
 idents <- seurat.H3K27ac@active.ident[colnames(seurat)]
 
 seurat <- AddMetaData(seurat,idents,col.name='H3K27ac_ident')
 
-p1 <- DimPlot(seurat,label=TRUE,repel=TRUE,label.size = 3) + NoLegend()
-p2 <- DimPlot(seurat,label=TRUE,group.by='H3K27ac_ident',repel=TRUE,label.size = 3) + NoLegend()
+p1 <- DimPlot(seurat,label=TRUE,repel=TRUE,label.size = 4) + NoLegend()
+p2 <- DimPlot(seurat,label=TRUE,group.by='H3K27ac_ident',repel=TRUE,label.size = 4) + NoLegend()
 p1+p2
 ```
+# Rbfox3 - pan-neuronal clusters #3, 6, 9, 11, 15
+```{r}
+DimPlot(seurat,label=TRUE) + NoLegend()
+FeaturePlot(seurat,'Rbfox3',max.cutoff = 3)
+VlnPlot(seurat,"Rbfox3",pt.size = 0) + NoLegend()
+```
+
+
+
+# Neurod1 - excitatory
+# Slc17a7 - excitatory 
+# Foxg1 - Telencephalon
+# Excitatory - 3, 11, 15
+```{r plot_markers}
+DimPlot(seurat,label=TRUE) + NoLegend()
+FeaturePlot(seurat,'Neurod1',max.cutoff = 3)
+VlnPlot(seurat,"Neurod1")
+FeaturePlot(seurat,'Slc17a7',max.cutoff = 3)
+VlnPlot(seurat,"Slc17a7")
+FeaturePlot(seurat,'chr12-49372226-49402169',max.cutoff = 3) + ggtitle("Foxg1") # Foxg1 locus
+VlnPlot(seurat,'chr12-49372226-49402169') + ggtitle("Foxg1")
+```
+# Inbibitory - 6,9.11
+
+```{r}
+DimPlot(seurat,label=TRUE) + NoLegend()
+FeaturePlot(seurat,'Gad1',max.cutoff = 3)
+VlnPlot(seurat,"Gad1")
+FeaturePlot(seurat,'Gad2',max.cutoff = 3)
+VlnPlot(seurat,"Gad2")
+
+```
+
+```{r}
+DimPlot(seurat,label=TRUE) + NoLegend()
+FeaturePlot(seurat,'Dlx5',max.cutoff = 3)
+VlnPlot(seurat,"Dlx5")
+FeaturePlot(seurat,'Dlx6',max.cutoff = 3)
+VlnPlot(seurat,"Dlx6")
+
+FeaturePlot(seurat,'Notch1',max.cutoff = 3)
+VlnPlot(seurat,"Notch1")
+
+```
+
+# Cluster 11 - markers of both microglia and neurons
+```{r}
+DimPlot(seurat,label=TRUE) + NoLegend()
+FeaturePlot(seurat,'C1qb',max.cutoff = 3)
+VlnPlot(seurat,"C1qb")
+FeaturePlot(seurat,"Il10ra",max.cutoff = 3)
+VlnPlot(seurat,"Il10ra")
+
+FeaturePlot(seurat,'Neurod1',max.cutoff = 3)
+VlnPlot(seurat,"Neurod1")
+FeaturePlot(seurat,'Slc17a7',max.cutoff = 3)
+VlnPlot(seurat,"Slc17a7")
+
+
+```
+
 
 
 
@@ -102,13 +163,13 @@ idents_L1 <- c(
   '3' = 'Neurons',
   '4' = 'Oligodendrocytes',
   '5' = 'Immune',
-  '6' = 'Neurons',
+  '6' = 'Neurons_Inhibitory',
   '7' = 'Astroependymal',
   '8' = 'Vascular',
   '9' = 'Neurons',
   '10' = 'Astroependymal',
-  '11' = 'Immune',
-  '12' = 'OPC',
+  '11' = 'Neurons',
+  '12' = 'Oligodendrocytes',
   '13' = 'Astroependymal',
   '14' = 'Olfactory ensheating cells',
   '15' = 'Neurons'
@@ -129,15 +190,15 @@ idents_L2 <- c(
     '0' = 'Vascular endothelialal cells',
     '1' = 'Astrocytes',
     '2' = 'Astrocytes',
-    '3' = 'Neurons',
+    '3' = 'Neurons_Excitatory',
     '4' = 'Oligodendrocytes',
     '5' = 'Microglia',
     '6' = 'Immature neurons',
     '7' = 'Choroid-ependymal cells',
     '8' = 'Vascular leptomeningeal cells',
-    '9' = 'Neurons',
+    '9' = 'Neurons_Inhibitory',
     '10' = 'Bergmann glia',
-    '11' = 'Microglia',
+    '11' = 'Neurons',
     '12' = 'Immature Oligodendrocytes',
     '13' = 'Radial glia',
     '14' = 'Olfactory ensheating cells',

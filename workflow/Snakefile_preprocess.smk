@@ -23,7 +23,8 @@ rule all_preprocess:
 def get_peaks_file_from_modality(sample,modality,barcode):
     if modality == "ATAC":
         # Cellranger default peak calling
-        peaks = "results/multimodal_data/{sample}/cellranger/{sample}_{modality}_{barcode}/outs/peaks.bed".format(sample=sample, modality=modality, barcode=barcode)
+        # peaks = "results/multimodal_data/{sample}/cellranger/{sample}_{modality}_{barcode}/outs/peaks.bed".format(sample=sample, modality=modality, barcode=barcode)
+        peaks = 'results/multimodal_data/{sample}/{modality}_{barcode}/peaks/macs_broad/{modality}_peaks.broadPeak'.format(sample=sample,modality=modality,barcode=barcode)
     elif modality == "H3K27ac":
         # Broad peaks
         peaks = 'results/multimodal_data/{sample}/{modality}_{barcode}/peaks/macs_broad/{modality}_peaks.broadPeak'.format(sample=sample, modality=modality, barcode=barcode)
@@ -195,22 +196,22 @@ rule barcode_metrics_all:
 ####### CELLS SELECTION
 rule cell_selection:
     input:
-        bcd_all   = 'results/multimodal_data/{sample}/{antibody}_{barcode}/barcode_metrics/all_barcodes.txt',
-        bcd_peak  = 'results/multimodal_data/{sample}/{antibody}_{barcode}/barcode_metrics/peaks_barcodes.txt',
-        peaks     = 'results/multimodal_data/{sample}/{antibody}_{barcode}/peaks/macs_broad/{antibody}_peaks.broadPeak',
-        metadata  = 'results/multimodal_data/{sample}/cellranger/{sample}_{antibody}_{barcode}/outs/singlecell.csv',
-        fragments = 'results/multimodal_data/{sample}/{antibody}_{barcode}/fragments/fragments.tsv.gz',
+        bcd_all   = 'results/multimodal_data/{sample}/{modality}_{barcode}/barcode_metrics/all_barcodes.txt',
+        bcd_peak  = 'results/multimodal_data/{sample}/{modality}_{barcode}/barcode_metrics/peaks_barcodes.txt',
+        peaks     = lambda wildcards: get_peaks_file_from_modality(wildcards.sample, wildcards.modality, wildcards.barcode),
+        metadata  = 'results/multimodal_data/{sample}/cellranger/{sample}_{modality}_{barcode}/outs/singlecell.csv',
+        fragments = 'results/multimodal_data/{sample}/{modality}_{barcode}/fragments/fragments.tsv.gz',
     output:
-        'results/multimodal_data/{sample}/{antibody}_{barcode}/cell_picking/cells_10x.png',
-        'results/multimodal_data/{sample}/{antibody}_{barcode}/cell_picking/cells_picked.png',
-        'results/multimodal_data/{sample}/{antibody}_{barcode}/cell_picking/cells_picked.bw',
-        'results/multimodal_data/{sample}/{antibody}_{barcode}/cell_picking/cells_not_picked.bw',
-        'results/multimodal_data/{sample}/{antibody}_{barcode}/cell_picking/metadata.csv',
+        'results/multimodal_data/{sample}/{modality}_{barcode}/cell_picking/cells_10x.png',
+        'results/multimodal_data/{sample}/{modality}_{barcode}/cell_picking/cells_picked.png',
+        'results/multimodal_data/{sample}/{modality}_{barcode}/cell_picking/cells_picked.bw',
+        'results/multimodal_data/{sample}/{modality}_{barcode}/cell_picking/cells_not_picked.bw',
+        'results/multimodal_data/{sample}/{modality}_{barcode}/cell_picking/metadata.csv',
     params:
         script      = workflow_dir + '/scripts/pick_cells.R',
-        out_prefix  = 'results/multimodal_data/{sample}/{antibody}_{barcode}/cell_picking/',
+        out_prefix  = 'results/multimodal_data/{sample}/{modality}_{barcode}/cell_picking/',
     shell:
-        "Rscript {params.script} --metadata {input.metadata} --fragments {input.fragments} --bcd_all {input.bcd_all} --bcd_peak {input.bcd_peak} --antibody {wildcards.antibody} --sample {wildcards.sample} --out_prefix {params.out_prefix}"
+        "Rscript {params.script} --metadata {input.metadata} --fragments {input.fragments} --bcd_all {input.bcd_all} --bcd_peak {input.bcd_peak} --antibody {wildcards.modality} --sample {wildcards.sample} --out_prefix {params.out_prefix}"
 
 rule create_seurat_object_bins:
     input:
