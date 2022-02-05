@@ -4,24 +4,25 @@ dependencies:
   - conda-forge::R=4.1
   - pyyaml
   - tbb=2020.2
-  - bioconda::bowtie2
-  - bioconda::macs2=2.2.7
+  - bioconda::bowtie2=2.3
+  - bioconda::macs2=2.2
   - bioconda::snakemake=5.15
   - bioconda::deeptools=3.5
   - bioconda::bedtools=2.30
   - bioconda::samtools=1.14
-  - bioconda::scvelo=0.2.4
   - bioconda::sra-tools
   - conda-forge::htcondor
   - conda-forge::pandoc
+  - conda-forge::udunits2
+  - conda-forge::gdal
 #  - conda-forge::udunits2
 #  - conda-forge::gdal
-  - bioconda::r-monocle3
+#  - bioconda::r-monocle3
 
 # Installing monocle3 is a nightmare
 
 # R packages
-# install.packages(c('argparse','ggplot2','funr','Signac','scales','Seurat','rmarkdown','mclust','GGally','BiocManager','patchwork','markdown','UpSetR','pheatmap','viridis','purrr','Rmagic','devtools'))
+# install.packages(c('argparse','ggplot2','funr','Signac','scales','Seurat','rmarkdown','mclust','GGally','BiocManager','patchwork','markdown','UpSetR','pheatmap','viridis','purrr','Rmagic','devtools','raster'))
 # BiocManager::install(c('ensembldb','EnsDb.Mmusculus.v79','GenomeInfoDb', 'GenomicRanges', 'IRanges', 'Rsamtools','BiocGenerics','rtracklayer','limma','slingshot'))
 
 
@@ -37,6 +38,6 @@ dependencies:
 # install.packages("devtools")
 # devtools::install_github('cole-trapnell-lab/leidenbase')
 # devtools::install_github('cole-trapnell-lab/monocle3')
-
 # devtools::install_github('cole-trapnell-lab/monocle3', ref="develop")
 # devtools::install_github("cole-trapnell-lab/cicero-release", ref = "monocle3")
+# devtools::install_github("r3fang/SnapATAC")

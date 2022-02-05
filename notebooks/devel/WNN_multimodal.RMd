@@ -3,6 +3,7 @@ title: "R Notebook"
 output: html_notebook
 params:
   out_prefix: "/data/proj/GCB_MB/bcd_CT/single-cell/results/"
+  seurat: "/data/proj/GCB_MB/bcd_CT/single-cell/results/multiple_modalities/ATAC_H3K27ac_H3K27me3/seurat_multimodal/peaks/Seurat_object.Rds"
 ---
 
 
@@ -12,79 +13,146 @@ library(Signac)
 library(ggplot2)
 library(dplyr)
 set.seed(1234)
+
 ```
 
+```{r, fig.width=12,fig.height=4}
+seurat <- readRDS(file=params$seurat)
+
+p1 <- DimPlot(seurat[[1]],label=TRUE) + NoLegend() + ggtitle(unique(seurat[[1]]$modality))
+p2 <- DimPlot(seurat[[2]],label=TRUE) + NoLegend() + ggtitle(unique(seurat[[2]]$modality))
+p3 <- DimPlot(seurat[[3]],label=TRUE) + NoLegend() + ggtitle(unique(seurat[[3]]$modality))
+p1+p2+p3
+```
+
+
 ```{r}
-modalities <- c("H3K27ac","H3K27me3")
-assay      <- 'peaks' 
+common.cells <- Cells(seurat[[4]])
 
-seurat.ls <- lapply(modalities, function(m) {readRDS(file=paste0(params$out_prefix,'single_modality/',m,'/seurat/peaks/Seurat_object_clustered_renamed.Rds'))})
+modalities <- names(seurat)
+modalities <- modalities[modalities!='merged']
 
-common.cells <- purrr::reduce(lapply(seurat.ls,Cells),intersect)
+for(x in modalities){
+  seurat[[x]] <- seurat[[x]][,common.cells]
+  seurat[['merged']][[paste0('peaks_',x)]] <- seurat[[x]][['peaks']]
+  seurat[['merged']][[paste0('GA_',x)]] <- seurat[[x]][['GA']]
+}
 
-seurat.multimodal                       <- CreateSeuratObject(seurat.ls[[1]][,common.cells][[assay]],assay = 'peaks_H3K27ac')
-seurat.multimodal[['peaks_H3K27me3']]   <- seurat.ls[[2]][,common.cells][[assay]]
+seurat.wnn <- seurat[['merged']]
+
+for(x in modalities){
+  DefaultAssay(seurat.wnn) <- paste0('peaks_',x)
+  seurat.wnn <- RunTFIDF(seurat.wnn) %>% FindTopFeatures() %>% RunSVD(reduction.name = paste0(x,'_lsi'))
+}
 
 
-DefaultAssay(seurat.multimodal) <- 'peaks_H3K27ac'
-seurat.multimodal <- RunTFIDF(seurat.multimodal) %>% FindTopFeatures() %>% RunSVD(reduction.name = 'h3k27ac_lsi')
 
 
-DefaultAssay(seurat.multimodal) <- 'peaks_H3K27me3'
-seurat.multimodal <- RunTFIDF(seurat.multimodal) %>% FindTopFeatures() %>% RunSVD(reduction.name = 'h3k27me3_lsi')
-
-seurat.multimodal <- FindMultiModalNeighbors(
-  seurat.multimodal, reduction.list = list("h3k27ac_lsi", "h3k27me3_lsi"), 
-  dims.list = list(1:50, 1:50), modality.weight.name = "histone.weight"
+seurat.wnn <- FindMultiModalNeighbors(
+  seurat.wnn, reduction.list = list("ATAC_lsi","H3K27ac_lsi", "H3K27me3_lsi"), 
+  dims.list = list(2:25,2:30, 2:30), modality.weight.name = "histone.weight",k.nn = 10
 )
 
-seurat.multimodal <- RunUMAP(seurat.multimodal, nn.name = "weighted.nn", reduction.name = "wnn.umap", reduction.key = "wnnUMAP_")
-seurat.multimodal <- FindClusters(seurat.multimodal, graph.name = "wsnn", algorithm = 3, resolution = 0.8, verbose = FALSE)
+seurat.wnn <- RunUMAP(seurat.wnn, nn.name = "weighted.nn", reduction.name = "wnn.umap", reduction.key = "wnnUMAP_")
+seurat.wnn <- FindClusters(seurat.wnn, graph.name = "wsnn", algorithm = 3, resolution = 0.8, verbose = FALSE)
 
-DimPlot(seurat.multimodal,label=TRUE)
-FeaturePlot(seurat.multimodal,'peaks_H3K27ac.weight',min.cutoff = 0.2,max.cutoff = 0.8) + scale_color_viridis_c()
-FeaturePlot(seurat.multimodal,'peaks_H3K27me3.weight',min.cutoff = 0.2,max.cutoff = 0.8) + scale_color_viridis_c()
+DimPlot(seurat.wnn,label=TRUE)
+
+FeaturePlot(seurat.wnn,'peaks_ATAC.weight',min.cutoff = 0.2,max.cutoff = 0.6) + scale_color_viridis_c()
+FeaturePlot(seurat.wnn,'peaks_H3K27ac.weight',min.cutoff = 0.2,max.cutoff = 0.6) + scale_color_viridis_c()
+FeaturePlot(seurat.wnn,'peaks_H3K27me3.weight',min.cutoff = 0.2,max.cutoff = 0.6) + scale_color_viridis_c()
 ```
 
 
-```{r, fig.width=8,fig.height=4}
-seurat.multimodal <- AddMetaData(seurat.multimodal,seurat.ls[[1]]$cluster_idents,col.name = 'H3K27ac_cluster_idents')
-p1 <- DimPlot(seurat.multimodal,group.by='H3K27ac_cluster_idents',label=TRUE) + NoLegend()
+```{r, fig.width=15,fig.height=15}
+for(x in modalities){
+  for(y in modalities){
+    seurat[[y]] <- AddMetaData(seurat[[y]],seurat[[x]]$idents_L3,col.name = paste0('idents_L3_',x))
+  }
+}
 
-seurat.multimodal <- AddMetaData(seurat.multimodal,seurat.ls[[2]]$cluster_idents,col.name = 'H3K27me3_cluster_idents')
-p2 <- DimPlot(seurat.multimodal,group.by='H3K27me3_cluster_idents',label=TRUE) + NoLegend()
-p1+p2
+p<- list()
+for(y in modalities)
+  for(x in modalities){
+    p[[y]][[x]] <- DimPlot(seurat[[y]],label=TRUE,repel=TRUE,group.by=paste0('idents_L3_',x)) + NoLegend()
+  }
+
+p <- purrr::reduce(p,c)
+library(gridExtra)
+do.call('grid.arrange',p)
 ```
 
+
+
+
+```{r,fig.width=15,fig.height=5}
+seurat.wnn <- AddMetaData(seurat.wnn,seurat[[1]]$idents_L3,col.name = 'H3K27ac_cluster_idents')
+p1 <- DimPlot(seurat.wnn,group.by='H3K27ac_cluster_idents',label=TRUE,repel=TRUE) + NoLegend()
+
+seurat.wnn <- AddMetaData(seurat.wnn,seurat[[2]]$idents_L3,col.name = 'H3K27me3_cluster_idents')
+p2 <- DimPlot(seurat.wnn,group.by='H3K27me3_cluster_idents',label=TRUE,repel=TRUE) + NoLegend()
+
+seurat.wnn <- AddMetaData(seurat.wnn,seurat[[3]]$idents_L3,col.name = 'ATAC_cluster_idents')
+p3 <- DimPlot(seurat.wnn,group.by='ATAC_cluster_idents',label=TRUE,repel=TRUE) + NoLegend()
+
+
+p1+p2+p3
+```
+
+
+`
+```{r}
+VlnPlot(seurat.wnn, features = "peaks_H3K27ac.weight", sort = TRUE, pt.size = 0.1,group.by="H3K27me3.idents_L3")  + NoLegend()
+VlnPlot(seurat.wnn, features = "peaks_H3K27me3.weight", sort = TRUE, pt.size = 0.1,group.by="H3K27me3.idents_L3")  + NoLegend() 
+VlnPlot(seurat.wnn, features = "peaks_ATAC.weight", sort = TRUE, pt.size = 0.1,group.by="H3K27me3.idents_L3")   + NoLegend()
+
+VlnPlot(seurat.wnn, features = "peaks_H3K27ac.weight", sort = TRUE, pt.size = 0.1,group.by="H3K27ac.idents_L3")  + NoLegend()
+VlnPlot(seurat.wnn, features = "peaks_H3K27me3.weight", sort = TRUE, pt.size = 0.1,group.by="H3K27ac.idents_L3")  + NoLegend() 
+VlnPlot(seurat.wnn, features = "peaks_ATAC.weight", sort = TRUE, pt.size = 0.1,group.by="H3K27ac.idents_L3")   + NoLegend()
+
+VlnPlot(seurat.wnn, features = "peaks_H3K27ac.weight", sort = TRUE, pt.size = 0.1,group.by="ATAC.idents_L3")  + NoLegend()
+VlnPlot(seurat.wnn, features = "peaks_H3K27me3.weight", sort = TRUE, pt.size = 0.1,group.by="ATAC.idents_L3")  + NoLegend() 
+VlnPlot(seurat.wnn, features = "peaks_ATAC.weight", sort = TRUE, pt.size = 0.1,group.by="ATAC.idents_L3")   + NoLegend()
+
+```
+
+```{r,fig.width=12,fig.height=6}
+wnn.idents <- seurat.wnn@active.ident
+
+seurat[1:3] <- lapply(seurat[1:3],function(x){
+  AddMetaData(x,wnn.idents,col.name = 'wnn.idents')
+})
+
+lapply(seurat[1:3],function(x){
+  p1 <- DimPlot(x,group.by='idents_L3',label=TRUE,repel=TRUE) + NoLegend()
+  p2 <- DimPlot(x,group.by = 'wnn.idents',label=TRUE,repel=TRUE) + NoLegend()
+  p1+p2
+})
+```
 
 
 ```{r}
+seurat <- readRDS(file=params$seurat)
 
-matrix.ls <- lapply(seurat.ls,function(x){
-  x[[assay]]@counts[,common.cells]
-})
-matrix.merged <- purrr::reduce(matrix.ls,rbind)
+DefaultAssay(seurat[['merged']]) <- 'peaks'
+seurat[['merged']] <- seurat[['merged']] %>% RunTFIDF() %>% FindTopFeatures() %>% RunSVD() 
 
-seurat.merged <- CreateAssayObject(counts = matrix.merged)  
-seurat.merged <- CreateSeuratObject(counts = seurat.merged,assay = 'merged',meta.data = seurat.multimodal@meta.data)  
+seurat[['merged']] <- RunUMAP(object = seurat[['merged']], dims=2:50,reduction = 'lsi')
+seurat[['merged']] <- FindNeighbors(seurat[['merged']],reduction = 'lsi',dims = 2:50) %>% FindClusters()
 
-seurat.merged <- RunTFIDF(seurat.merged) %>% FindTopFeatures() %>% RunSVD() 
-seurat.merged <- RunUMAP(object = seurat.merged, dims=1:30,reduction = 'lsi')
-
-DimPlot(seurat.merged)
+DimPlot(seurat[['merged']],label=TRUE) + NoLegend()
 ```
-```{r,fig.width=5,fig.height=5}
-lapply(seurat.ls,function(x){
-  DimPlot(x,label=TRUE,repel=TRUE) + NoLegend()
-})
-```
+
+
+
 
 
 ```{r, fig.width=8,fig.height=4}
-seurat.merged <- AddMetaData(seurat.merged,seurat.ls[[1]]$cluster_idents,col.name = 'H3K27ac_cluster_idents')
-p1 <- DimPlot(seurat.merged,group.by='H3K27ac_cluster_idents',label=TRUE,repel=TRUE) + NoLegend()
+for(x in modalities){
+  seurat[['merged']] <- AddMetaData(seurat[['merged']],metadata = seurat[[x]]$idents_L3,col.name = paste0(x,'_idents_L3'))
+}
+lapply(modalities,function(x){
+  DimPlot(seurat[['merged']],group.by=paste0(x,'_idents_L3'),label=TRUE,repel=TRUE) + NoLegend()
+})
 
-seurat.merged <- AddMetaData(seurat.merged,seurat.ls[[2]]$cluster_idents,col.name = 'H3K27me3_cluster_idents')
-p2 <- DimPlot(seurat.merged,group.by='H3K27me3_cluster_idents',label=TRUE,repel=TRUE) + NoLegend()
-p1+p2
 ```

@@ -31,6 +31,7 @@ rule all_single_modality:
         expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/bam_per_cluster/{ident}/bam/',modality=antibodies_list,feature='peaks',ident=['idents_L1','idents_L2','idents_L3','seurat_clusters']),
         expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/bam_per_cluster/{ident}/bigwig/',modality=antibodies_list,feature='peaks',ident=['idents_L1','idents_L2','idents_L3','seurat_clusters']),
 
+
 rule integrate_with_scRNA:
     input:
         seurat = 'results/multimodal_data/single_modality/{modality}/seurat/{feature}/Seurat_object_clustered.Rds',

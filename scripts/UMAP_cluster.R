@@ -28,6 +28,17 @@ args <- parser$parse_args()
 # args$ndim <- 50
 # args$output <- "/data/proj/GCB_MB/bcd_CT/single-cell/data.Rds"
 
+normalize <- function(seurat_object,assay){
+  if (sum(colSums(seurat_object[[assay]]@counts)) == 0){           # Empty counts matrix -> Don't normalize and assume using d
+    VariableFeatures(seurat_object) <- rownames(seurat_object)
+  }
+  else{
+    seurat_object <- FindTopFeatures(seurat_object)
+    seurat_object <- RunTFIDF(seurat_object)
+  }
+  return(seurat_object)
+}
+
 UMAP_and_cluster <- function(seurat_object, assay, ndim = 50, output = 'seurat_object.Rds'){
   DefaultAssay(seurat_object) <- assay
   if(!'modality' %in% colnames(seurat_object@meta.data)){
@@ -35,8 +46,7 @@ UMAP_and_cluster <- function(seurat_object, assay, ndim = 50, output = 'seurat_o
   }
   modality <- unique(seurat_object$modality)
   
-  seurat_object <- RunTFIDF(seurat_object)
-  seurat_object <- FindTopFeatures(seurat_object)
+  seurat_object <- normalize(seurat_object,assay)
   
   seurat_object <- RunSVD(
     object = seurat_object,
@@ -81,8 +91,12 @@ UMAP_and_cluster <- function(seurat_object, assay, ndim = 50, output = 'seurat_o
 # Load data
 seurat.ls <- readRDS(args$input)
 
+
 # If single modality
 if(length(seurat.ls) ==1){
+  if (!'modality' %in% colnames(seurat.ls@meta.data)){
+    seurat.ls$modality <- 'Unknown'
+  }
     seurat.ls <- UMAP_and_cluster(seurat_object = seurat.ls,
                                   assay = args$assay,
                                 ndim = args$ndim,
