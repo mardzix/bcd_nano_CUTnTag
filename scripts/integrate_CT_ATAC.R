@@ -67,4 +67,4 @@ p2 <- DimPlot(coembed[,coembed$integration_ident=='query'],label=TRUE) + NoLegen
 p1+p2
 
 ggsave(filename = paste0(args$out,'.png'),plot = p1+p2,width=20,height=10)
-saveRDS(object = coembed, file=args$out)
+saveRDS(object = coembed, file = args$out)

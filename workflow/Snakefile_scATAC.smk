@@ -14,7 +14,7 @@ def get_filenames_from_url_txt(path):
 
 rule scATAC_all:
     input:
-#        expand('results/scATAC_bingren/download/snap/{file}',file = get_filenames_from_url_txt(workflow_dir + '/config/bingren_snap_files.txt')),              # SNAP files
+        expand('results/scATAC_bingren/download/snap/{file}',file = get_filenames_from_url_txt(workflow_dir + '/config/bingren_snap_files.txt')),              # SNAP files
         "results/scATAC_bingren/seurat/Seurat_merged_clustered.Rds",                                                                                          # Seurat object
         # Integration bingren data
         expand("results/multimodal_data/single_modality/{modality}/seurat/peaks/integration/integrated_with_ATAC_{reference}.Rds", modality= ['ATAC','H3K27ac'],reference = ['GABA','GLUT','nonN','merged_clustered']) # TODO move to the snakefile_single_modality

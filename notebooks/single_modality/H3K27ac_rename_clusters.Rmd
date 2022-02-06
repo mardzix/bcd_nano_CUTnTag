@@ -142,7 +142,7 @@ idents_L3 <- c(
     '13' = 'Astrocytes_3',
     '14' = 'OPC_COP',
     '15' = 'Neurons_2',
-    '16' = 'Neurons_inhibitory',
+    '16' = 'Inh1',
     '17' = 'Macrophages',
     '18' = 'Pericytes',
     '19' = 'Vascular lepto-meningeal cells',
@@ -170,6 +170,56 @@ p4 <- DimPlot(seurat.renamed,label=TRUE,repel=TRUE,group.by='seurat_clusters',la
 
 p1+p2+p3+p4
 ```
+
+```{r rename_L3_alternative, fig.width=24,fig.height=8,eval=FALSE}
+# TODO
+idents_L3 <- c(
+    '0' = 'ACTE',
+    '1' = 'ACTN',
+    '2' = 'OLG',
+    '3' = 'NEU', # Cerebellum ? 
+    '4' = 'VEC1',
+    '5' = 'VEC2',
+    '6' = 'MGL1',
+    '7' = 'MGL2',
+    '8' = 'EXC1',
+    '9' = '',
+    '10' = 'Microglia_3',
+    '11' = 'SVZ Radial glia',
+    '12' = 'Bergmann glia',
+    '13' = 'Astrocytes_3',
+    '14' = 'OPC_COP',
+    '15' = 'Neurons_2',
+    '16' = 'Inh1',
+    '17' = 'Macrophages',
+    '18' = 'Pericytes',
+    '19' = 'Vascular lepto-meningeal cells',
+    '20' = 'Olfactory ensheating cells',
+    '21' = 'Dentate gyrus neuroblast',
+    '22' = 'Astrocytes_4',
+    '23' = 'Choroid plexus epithelial cells',
+    '24' = 'Neurons_3',
+    '25' = 'Vascular smooth muscle cells',
+    '26' = 'Ependymal cells',
+    '27' = 'Microglia_4',
+    '28' = 'Arachnoid barreer cells',
+    '29' = 'Neurons_5')
+
+seurat.renamed                <- RenameIdents(seurat.renamed,idents_L3)
+seurat.renamed$idents_L3      <- seurat.renamed@active.ident
+seurat.renamed                <- SetIdent(seurat.renamed,cells = names(seurat.renamed$seurat_clusters), value = seurat.renamed$seurat_clusters)
+
+
+
+p1 <- DimPlot(seurat.renamed,label=TRUE,repel=TRUE,group.by='idents_L1', label.size = 2.5) + NoLegend()
+p2 <- DimPlot(seurat.renamed,label=TRUE,repel=TRUE,group.by='idents_L2', label.size = 2.5) + NoLegend()
+p3 <- DimPlot(seurat.renamed,label=TRUE,repel=TRUE,group.by='idents_L3', label.size = 2.5) + NoLegend()
+p4 <- DimPlot(seurat.renamed,label=TRUE,repel=TRUE,group.by='seurat_clusters',label.size = 2.5) + NoLegend()
+
+p1+p2+p3+p4
+```
+
+
 
 ```{r}
 lapply(c('idents_L1','idents_L2','idents_L3','seurat_clusters'),function(x){
