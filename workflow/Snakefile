@@ -21,6 +21,7 @@ rule all:
         expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/bigwig/{idents}/',modality=antibodies_list,feature='peaks',idents=['idents_L1', 'idents_L2', 'idents_L3', 'seurat_clusters']),# TODO: use 'peaks' and idents as variable
         expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/markers/{idents}/markers.csv',modality=antibodies_list,feature='peaks',idents=['idents_L1', 'idents_L2', 'idents_L3', 'seurat_clusters']),
         expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/L3_niche_markers2/L3_markers.csv',modality = antibodies_list, feature = 'peaks'),
+        expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/bam_per_cluster/{ident}/bigwig/', modality=antibodies_list, feature='peaks', ident=['idents_L1', 'idents_L2', 'idents_L3', 'seurat_clusters']),
 
         # Multimodal data
         [expand('results/multiple_modalities/{combination}/seurat_multimodal/{feature}/Seurat_object.Rds', combination="_".join(combination), feature = ['peaks']) for combination in modalities_combinations],
@@ -28,7 +29,4 @@ rule all:
         # nbiotech data
         expand('results/nbiotech_data/{sample}/seurat/bin_{binwidth}/Seurat_object.Rds', sample=samples_list_nbiotech, binwidth=5000),
 
-        # bam files new
-        expand('results/multimodal_data/single_modality/{modality}/bam/possorted_bam_sampleID.bam',modality = antibodies_list),
-        expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/bam_per_cluster/{ident}/bam/',modality=antibodies_list,feature='peaks',ident=['idents_L1','idents_L2','idents_L3','seurat_clusters']),
-        expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/bam_per_cluster/{ident}/bigwig/', modality=antibodies_list, feature='peaks', ident=['idents_L1', 'idents_L2', 'idents_L3', 'seurat_clusters']),
+

@@ -40,15 +40,16 @@ def get_fragments_per_modality(modality, barcodes_dict):
     for s in barcodes_dict:
         for m in barcodes_dict[s]:
             if modality == m:
-               result.append('results/{sample}/{modality}_{barcode}/fragments/fragments.tsv.gz'.format(sample = s, modality = m, barcode=barcodes_dict[s][m]))
+               result.append('results/multimodal_data/{sample}/{modality}_{barcode}/fragments/fragments.tsv.gz'.format(sample = s, modality = m, barcode=barcodes_dict[s][m]))
     return result
 def get_seurat_per_modality(modality, barcodes_dict,feature):
     result = []
     for s in barcodes_dict:
         for m in barcodes_dict[s]:
             if modality == m:
-               result.append('results/{sample}/{modality}_{barcode}/seurat/{feature}/Seurat_object.Rds'.format(sample = s, modality = m, barcode=barcodes_dict[s][m], feature = feature))
+               result.append('results/multimodal_data/{sample}/{modality}_{barcode}/seurat/{feature}/Seurat_object.Rds'.format(sample = s, modality = m, barcode=barcodes_dict[s][m], feature = feature))
     return result
+
 rule demultiplex:
     input:
         script = workflow_dir + '/scripts/debarcode.py',

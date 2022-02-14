@@ -7,8 +7,10 @@ params:
   out_prefix: "/data/proj/GCB_MB/bcd_CT/single-cell/results/"
   modality: "H3K27me3"
   feature: "peaks"
-  input: "results/multimodal_data/single_modality/H3K27me3/seurat/peaks/Seurat_object_clustered.Rds"
-  output: "results/multimodal_data/single_modality/H3K27me3/seurat/peaks/Seurat_object_clustered_renamed.Rds"
+  input: "/data/proj/GCB_MB/bcd_CT/single-cell/results/multimodal_data/single_modality/H3K27me3/seurat/peaks/Seurat_object_clustered.Rds"
+  integrated: "/data/proj/GCB_MB/bcd_CT/single-cell/results/multimodal_data/single_modality/H3K27me3/seurat/peaks/integration/integration_RNA.Rds"
+  H3K27ac: "/data/proj/GCB_MB/bcd_CT/single-cell/results/multimodal_data/single_modality/H3K27ac/seurat/peaks/Seurat_object_clustered_renamed.Rds"
+  output: "/data/proj/GCB_MB/bcd_CT/single-cell/results/multimodal_data/single_modality/H3K27me3/seurat/peaks/Seurat_object_clustered_renamed.Rds"
 ---
 
 ```{r setup, include=FALSE}
@@ -24,13 +26,28 @@ set.seed(1234)
 ```
 
 ```{r load_data}
-#seurat <- readRDS(file=paste0(params$out_prefix,'/multimodal_data/single_modality/',params$modality,'/seurat/',params$feature,'/Seurat_object_clustered.Rds'))
 seurat <- readRDS(file=params$input)
 DimPlot(seurat,label=TRUE)
 ```
 
 
-```{r recluster_function}
+```{r helper, fig.width=10,fig.height=4,eval=FALSE}
+seurat.H3K27ac <- readRDS(file=params$H3K27ac)
+
+idents <- seurat.H3K27ac$idents_L3
+seurat <- AddMetaData(seurat,idents,col.name='H3K27ac_ident')
+
+p1 <- DimPlot(seurat,label=TRUE,repel=TRUE,label.size = 3) + NoLegend()
+p2 <- DimPlot(seurat.H3K27ac,label=TRUE,repel=TRUE,label.size = 3,group.by = 'idents_L3') + NoLegend()
+p3 <- DimPlot(seurat,label=TRUE,group.by='H3K27ac_ident',repel=TRUE,label.size = 3) + NoLegend()
+p2 + p1 + p3
+```
+
+
+
+```{r recluster, eval=FALSE}
+# No need to run re-clustering
+# Just keep it here 
 
 UMAP_and_cluster <- function(seurat_object, assay, ndim = 50, output = 'seurat_object.Rds', resolution = 0.8){
   DefaultAssay(seurat_object) <- assay
@@ -38,94 +55,77 @@ UMAP_and_cluster <- function(seurat_object, assay, ndim = 50, output = 'seurat_o
     seurat_object$modality <- 'Unknown'
   }
   modality <- unique(seurat_object$modality)
-  
+
   seurat_object <- RunTFIDF(seurat_object)
   seurat_object <- FindTopFeatures(seurat_object)
-  
+
   seurat_object <- RunSVD(
     object = seurat_object,
     assay = assay,
     reduction.name = 'lsi'
   )
-  
+
   p.depthcor <- DepthCor(seurat_object)
   ggsave(filename = paste0(dirname(output),'/',modality,'_',assay,'_depthcor.png'),width=4,height=4)
-  
+
   dims          <- c(2:ndim)
-  
+
   seurat_object <- RunUMAP(
     object = seurat_object,
     reduction = 'lsi',
     dims = dims
   )
-  
+
   seurat_object <- FindNeighbors(
     object = seurat_object,
     reduction = 'lsi',
     dims = dims
   )
-  
+
   seurat_object <- FindClusters(
     object = seurat_object,
     algorithm = 3,
-    resolution=resolution,
+    #      resolution = 0.2,
     verbose = FALSE
   )
   return(seurat_object)
- 
+
 }
 
 seurat <- UMAP_and_cluster(seurat_object = seurat,assay = 'peaks',ndim=40,resolution = 1.0)
-
 DimPlot(seurat,label=TRUE) + NoLegend()
 ```
 
-```{r helper, fig.width=10,fig.height=4,eval=FALSE}
-seurat.H3K27ac <- readRDS(file=paste0(params$out_prefix,'/single_modality/','H3K27ac','/seurat/',params$feature,'/Seurat_object_clustered_renamed.Rds'))
-
-idents <- seurat.H3K27ac$idents_L3[colnames(seurat)]
-
-seurat <- AddMetaData(seurat,idents,col.name='H3K27ac_ident')
-
-p1 <- DimPlot(seurat,label=TRUE,repel=TRUE,label.size = 3) + NoLegend()
-p2 <- DimPlot(seurat,label=TRUE,group.by='H3K27ac_ident',repel=TRUE,label.size = 3) + NoLegend()
-p1+p2
-```
 
 
-
-```{r rename_L1,fig.width=24,fig.height=8}
+```{r rename_L1,fig.width=8,fig.height=4}
 idents_L1 <- c(
   '0' = 'Astroependymal',
-  '1' = 'Immune',
-  '2' = 'Astroependymal',
-  '3' = 'Oligodendrocytes',
-  '4' = 'Vascular',
+  '1' = 'Astroependymal',
+  '2' = 'Vascular',
+  '3' = 'Immune',
+  '4' = 'Oligodendrocytes',
   '5' = 'Neurons',
-  '6' = 'Vascular',
+  '6' = 'Neurons',
   '7' = 'Neurons',
   '8' = 'Astroependymal',
   '9' = 'Neurons',
   '10' = 'Astroependymal',
-  '11' = 'Neurons',
-  '12' = 'Oligodendrocytes',
+  '11' = 'Immune',
+  '12' = 'Vascular',
   '13' = 'Immune',
-  '14' = 'Astroependymal',
-  '15' = 'Immune',
-  '16' = 'Vascular',
-  '17' = 'Vascular',
-  '18' = 'Neurons',
-  '19' = 'Neurons',
-  '20' = 'Olfactory ensheating cells',
-  '21' = 'Astroependymal',
+  '14' = 'Vascular',
+  '15' = 'Neurons',
+  '16' = 'Neurons',
+  '17' = 'Olfactory ensheating cells',
+  '18' = 'Oligodendrocytes',
+  '19' = 'Astroependymal',
+  '20' = 'Astroependymal',
+  '21' = 'Neurons',
   '22' = 'Astroependymal',
-  '23' = 'Neurons',
-  '24' = 'Neurons',
-  '25' = 'Astroependymal',
-  '26' = 'Astroependymal',
-  '27' = 'Immune',
-  '28' = 'Neurons'
+  '23' = 'Neurons'
 )
+
 seurat.renamed                 <- RenameIdents(seurat,idents_L1)
 seurat.renamed$idents_L1       <- seurat.renamed@active.ident
 seurat.renamed                 <- SetIdent(seurat.renamed,cells = names(seurat.renamed$seurat_clusters), value = seurat.renamed$seurat_clusters)
@@ -137,38 +137,34 @@ p1+p2
 ```
 
 
-```{r rename_L2, fig.width=24,fig.height=8}
+```{r rename_L2, fig.width=12,fig.height=4}
 idents_L2 <- c(
-  '0' = 'Astrocytes',
-  '1' = 'Microglia',
-  '2' = 'Astrocytes',
-  '3' = 'Oligodendrocytes',
-  '4' = 'Vascular endothelial',
-  '5' = 'Neurons',
-  '6' = 'Vascular endothelial',
-  '7' = 'Neurons',
-  '8' = 'Astrocytes',
-  '9' = 'Immature neurons',
-  '10' = 'Radial glia',
-  '11' = 'Neurons',
-  '12' = 'Oligodendrocytes',
-  '13' = 'Microglia',
-  '14' = 'Bergmann glia',
-  '15' = 'Macrophages',
-  '16' = 'Pericytes',
-  '17' = 'Vascular leptomeningeal cells',
-  '18' = 'Neurons',
-  '19' = 'Neurons',
-  '20' = 'Olfactory ensheating cells',
-  '21' = 'Astrocytes',
-  '22' = 'Choroid plexus',
-  '23' = 'Neurons',
-  '24' = 'Neurons',
-  '25' = 'Ependymal cells',
-  '26' = 'Astrocytes',
-  '27' = 'Microglia',
-  '28' = 'Neurons'
+  '0' = 'Astrocytes_1',
+  '1' = 'Astrocytes_2',
+  '2' = 'Vascular_1',
+  '3' = 'Microglia_1',
+  '4' = 'Oligodendrocytes',
+  '5' = 'Neurons_Excitatory_1',
+  '6' = 'Neurons_Excitatory_2',
+  '7' = 'Neurons_Excitatory_3',
+  '8' = 'Astrocytes_2',
+  '9' = 'Neurons_Inhibitory_1',
+  '10' = 'Bergman glia',
+  '11' = 'Microglia_2',
+  '12' = 'Vascular leptomeningeal cells',
+  '13' = 'Macrophages',
+  '14' = 'Pericytes',
+  '15' = 'Neuron_Inhibitory_2',
+  '16' = 'Neurons_Inhibitory_3',
+  '17' = 'Olfactory ensheating cells',
+  '18' = 'Oligodendrocyte progenitor cells',
+  '19' = 'Astrocytes_3',
+  '20' = 'Choroid plexus',
+  '21' = 'Neurons_Inhibitory_4',
+  '22' = 'Ependymal cells',
+  '23' = 'Neurons_Excitatory_4'
 )
+
 
 
 seurat.renamed                <- RenameIdents(seurat.renamed,idents_L2)
@@ -183,37 +179,32 @@ p1+p2+p3
 ```
 
 
-```{r rename_L3, fig.width=24,fig.height=8}
+```{r rename_L3, fig.width=12,fig.height=4}
 idents_L3 <- c(
-  '0' = 'Telencephalon Astrocytes',
-  '1' = 'Microglia_1',
-  '2' = 'Non-telencephalon Astrocytes_1',
-  '3' = 'Oligodendrocytes',
-  '4' = 'Vascular endothelial_1',
-  '5' = 'Neurons_1',
-  '6' = 'Vascular endothelial_2',
-  '7' = 'Neurons_2',
-  '8' = 'Astrocytes_1',
-  '9' = 'Immature neurons_1',
-  '10' = 'Radial glia',
-  '11' = 'Neurons_3',
-  '12' = 'OPC_COP',
-  '13' = 'Microglia_2',
-  '14' = 'Bergmann glia',
-  '15' = 'Macrophages',
-  '16' = 'Pericytes',
-  '17' = 'Vascular leptomeningeal cells',
-  '18' = 'Neurons_4',
-  '19' = 'Neurons_5',
-  '20' = 'Olfactory ensheating cells',
-  '21' = 'Astrocytes_3',
-  '22' = 'Choroid plexus',
-  '23' = 'Neurons_6',
-  '24' = 'Neurons_7',
-  '25' = 'Ependymal cells',
-  '26' = 'Astrocytes_4',
-  '27' = 'Microglia_3',
-  '28' = 'Neurons_8'
+  '0' = 'Astrocytes_Non-Telencephalon',
+  '1' = 'Astrocytes_Telencephalon',
+  '2' = 'Vascular Endothelial cells',
+  '3' = 'Microglia_1',
+  '4' = 'Oligodendrocytes',
+  '5' = 'Neurons_Excitatory_1',
+  '6' = 'Neurons_Excitatory_2',
+  '7' = 'Neurons_Excitatory_3',
+  '8' = 'Astro-Radial_glia',
+  '9' = 'Neurons_Inhibitory_1',
+  '10' = 'Bergman glia',
+  '11' = 'Microglia_2',
+  '12' = 'Vascular leptomeningeal cells',
+  '13' = 'Macrophages',
+  '14' = 'Pericytes',
+  '15' = 'Neuron_Inhibitory_2',
+  '16' = 'Neurons_Inhibitory_3',
+  '17' = 'Olfactory ensheating cells',
+  '18' = 'Oligodendrocyte progenitor cells',
+  '19' = 'Astrocytes_3',
+  '20' = 'Choroid plexus',
+  '21' = 'Neurons_Inhibitory_4',
+  '22' = 'Ependymal cells',
+  '23' = 'Neurons_Excitatory_4'
 )
 
 
@@ -227,11 +218,53 @@ p2 <- DimPlot(seurat.renamed,label=TRUE,repel=TRUE,group.by='idents_L2', label.s
 p3 <- DimPlot(seurat.renamed,label=TRUE,repel=TRUE,group.by='idents_L3', label.size = 2.5) + NoLegend()
 p4 <- DimPlot(seurat.renamed,label=TRUE,repel=TRUE,group.by='seurat_clusters',label.size = 2.5) + NoLegend()
 
-p1+p2+p3+p4
+p1+p3+p4
+```
+
+
+```{r rename_L3, fig.width=12,fig.height=4}
+idents_short <- c(
+  '0' = 'AST_TE',
+  '1' = 'AST_NT',
+  '2' = 'VEC',
+  '3' = 'MGL1',
+  '4' = 'MOL',
+  '5' = 'EXC1',
+  '6' = 'EXC2',
+  '7' = 'EXC3',
+  '8' = 'RGC',
+  '9' = 'INH1',
+  '10' = 'BG',
+  '11' = 'MGL2',
+  '12' = 'VLMC',
+  '13' = 'MAC',
+  '14' = 'PER',
+  '15' = 'INH2',
+  '16' = 'INH3',
+  '17' = 'OEC',
+  '18' = 'OPC',
+  '19' = 'AST3',
+  '20' = 'CHP',
+  '21' = 'INH4',
+  '22' = 'EPE',
+  '23' = 'EXC4'
+)
+
+
+seurat.renamed                   <- RenameIdents(seurat.renamed,idents_short)
+seurat.renamed$idents_short      <- seurat.renamed@active.ident
+seurat.renamed                   <- SetIdent(seurat.renamed,cells = names(seurat.renamed$seurat_clusters), value = seurat.renamed$seurat_clusters)
+
+
+p1 <- DimPlot(seurat.renamed,label=TRUE,repel=TRUE,group.by='idents_L1') + NoLegend()
+p3 <- DimPlot(seurat.renamed,label=TRUE,repel=TRUE,group.by='idents_short') + NoLegend()
+p4 <- DimPlot(seurat.renamed,label=TRUE,repel=TRUE,group.by='seurat_clusters') + NoLegend()
+
+p1+p3+p4
 ```
 
 ```{r}
-lapply(c('idents_L1','idents_L2','idents_L3','seurat_clusters'),function(x){
+lapply(c('idents_L1','idents_L2','idents_L3','seurat_clusters','idents_short'),function(x){
   p1 <- DimPlot(seurat.renamed, label=TRUE,group.by=x,repel=TRUE) + NoLegend()
   ggsave(plot=p1, filename=paste0(dirname(params$output),'/UMAP_',x,'.png'),width=12,height=12)
 })

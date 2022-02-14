@@ -45,8 +45,9 @@ rule integrate_with_scRNA:
 
 rule cluster_final_and_rename:
     input:
-        seurat   = 'results/multimodal_data/single_modality/{modality}/seurat/{feature}/Seurat_object_clustered.Rds',
-        notebook =  workflow_dir + '/notebooks/single_modality/{modality}_rename_clusters.Rmd',
+        seurat     = 'results/multimodal_data/single_modality/{modality}/seurat/{feature}/Seurat_object_clustered.Rds',
+        notebook   =  workflow_dir + '/notebooks/single_modality/{modality}_rename_clusters.Rmd',
+        integrated =  'results/multimodal_data/single_modality/{modality}/seurat/{feature}/integration/integration_RNA.Rds',
     output:
         seurat   = 'results/multimodal_data/single_modality/{modality}/seurat/{feature}/Seurat_object_clustered_renamed.Rds'
     params:
@@ -59,6 +60,7 @@ rule cluster_final_and_rename:
         "                                           modality = '{wildcards.modality}', "
         "                                           feature = '{wildcards.feature}', "
         "                                           input = '{params.out_prefix}{input.seurat}', "
+        "                                           integrated = '{input.integrated}', "                                  
         "                                           output = '{params.out_prefix}{output.seurat}'))\" "
 
 
