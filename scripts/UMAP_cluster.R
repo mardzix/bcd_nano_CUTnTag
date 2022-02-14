@@ -16,6 +16,8 @@ parser$add_argument("-a","--assay",type="character",default="bins_5000",
                     help="Assay to be used for dimreduce and clustering")
 parser$add_argument('-d','--ndim',type='integer',default=50,
                   help='Number of LSI components to use for UMAP and KNN')
+parser$add_argument('-g','--plot_group',type='character',default='seurat_clusters',
+                    help='metadata group to use for plotting')
 parser$add_argument('-m','--modality',type='character',
                     help='modality to use for clustering if list of objects (only applies for multimodal list of seurat objects)',default='merged')
 args <- parser$parse_args()
@@ -80,8 +82,8 @@ UMAP_and_cluster <- function(seurat_object, assay, ndim = 50, output = 'seurat_o
   
   # seurat_object@meta.data[,paste0('clusters_',antibody)] <- seurat_object@active.ident
   
-  p1 <- DimPlot(seurat_object,label=TRUE)
-  p2 <- DimPlot(seurat_object,group.by='sample',label=TRUE) + theme(legend.position = 'bottom') + ggtitle(unique(seurat_object$modality))
+  p1 <- DimPlot(seurat_object,label=TRUE) + NoLegend()
+  p2 <- DimPlot(seurat_object,group.by=args$plot_group,label=TRUE) + theme(legend.position = 'bottom') + ggtitle(unique(seurat_object$modality)) + NoLegend()
   ggsave(plot = p1+p2,
          filename =  paste0(dirname(output),'/',modality,'_',assay,'_UMAP.png'),width = 8,height = 4)
   return(seurat_object)
@@ -90,7 +92,6 @@ UMAP_and_cluster <- function(seurat_object, assay, ndim = 50, output = 'seurat_o
 
 # Load data
 seurat.ls <- readRDS(args$input)
-
 
 # If single modality
 if(length(seurat.ls) ==1){

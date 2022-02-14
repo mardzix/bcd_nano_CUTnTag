@@ -286,11 +286,9 @@ rule run_macs_broad_merged:
 rule merge_seurat_single_modality:
     input:
         seurat = lambda wildcards: get_seurat_per_modality(modality=wildcards.modality,barcodes_dict=barcodes_dict, feature=wildcards.feature),
-        # script = workflow_dir + '/scripts/merge_objects.R' # TODO uncomment
+        script = workflow_dir + '/scripts/merge_objects.R' # TODO uncomment
     output:
         seurat = 'results/multimodal_data/single_modality/{modality}/seurat/{feature}/Seurat_object.Rds'
-    params:
-        script = workflow_dir + '/scripts/merge_objects.R' # TODO move to input
     shell:
         'Rscript {input.script} -i {input.seurat} -o {output.seurat}'
 
@@ -302,9 +300,10 @@ rule cluster:
     output:
         seurat = 'results/multimodal_data/single_modality/{modality}/seurat/{feature}/Seurat_object_clustered.Rds'
     params:
-        script = workflow_dir + '/scripts/UMAP_cluster.R'
+        script = workflow_dir + '/scripts/UMAP_cluster.R',
+        plot_group = 'sample'
     shell:
-        'Rscript {params.script} -i {input.seurat} -o {output.seurat} -a {wildcards.feature} -d 40 '
+        'Rscript {params.script} -i {input.seurat} -o {output.seurat} -a {wildcards.feature} -d 40 -g {params.plot_group} '
 
 
 

@@ -14,37 +14,22 @@ def get_filenames_from_url_txt(path):
 
 rule scATAC_all:
     input:
-        expand('results/scATAC_bingren/download/snap/{file}',file = get_filenames_from_url_txt(workflow_dir + '/config/bingren_snap_files.txt')),              # SNAP files
-        "results/scATAC_bingren/seurat/Seurat_merged_clustered.Rds",                                                                                          # Seurat object
-        # Integration bingren data
-        expand("results/multimodal_data/single_modality/{modality}/seurat/peaks/integration/integrated_with_ATAC_{reference}.Rds", modality= ['ATAC','H3K27ac'],reference = ['GABA','GLUT','nonN','merged_clustered']) # TODO move to the snakefile_single_modality
-
+        'results/scATAC_bingren/seurat/Seurat_ATAC_clustered.Rds',
+        'results/scATAC_bingren/seurat/Seurat_ATAC_fragments.bed.gz',
+        expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/integration/integrated_with_ATAC_{nfeatures}.Rds', modality = ['ATAC','H3K27ac'], feature = 'peaks', nfeatures = [1000,5000,10000,20000,40000,50000,75000,100000,125000,150000,200000]),
 
 ############################# Bing ren mouse brain
 # Li, Y.E., Preissl, S., Hou, X. et al. An atlas of gene regulatory elements in adult mouse cerebrum. Nature 598, 129–136 (2021). https://doi.org/10.1038/s41586-021-03604-1
 
-rule download_tsv_matrix:
+rule download_metadata:
     output:
-        mat_nonN  = "results/scATAC_bingren/download/matrix_nonN.tsv.gz",
-        meta_nonN = "results/scATAC_bingren/download/meta_nonN.tsv",
-        mat_GABA  = "results/scATAC_bingren/download/matrix_GABA.tsv.gz",
-        meta_GABA = "results/scATAC_bingren/download/meta_GABA.tsv",
-        mat_GLUT  = "results/scATAC_bingren/download/matrix_GLUT.tsv.gz",
-        meta_GLUT = "results/scATAC_bingren/download/meta_GLUT.tsv",
+        'results/scATAC_bingren/download/snap/metadata.tsv'
     params:
-        mat_nonN  = "http://catlas.org/mousebrain/cellbrowser/NonN_all/exprMatrix.tsv.gz",
-        meta_nonN = "http://catlas.org/mousebrain/cellbrowser/NonN_all/meta.tsv",
-        mat_GABA  = "http://catlas.org/mousebrain/cellbrowser/GABA_all/exprMatrix.tsv.gz",
-        meta_GABA = "http://catlas.org/mousebrain/cellbrowser/GABA_all/meta.tsv",
-        mat_GLUT  = "http://catlas.org/mousebrain/cellbrowser/Glutamate_all/exprMatrix.tsv.gz",
-        meta_GLUT = "http://catlas.org/mousebrain/cellbrowser/Glutamate_all/meta.tsv",
+        out_zip = 'results/scATAC_bingren/download/snap/metadata.tsv.zip',
+        url = 'http://renlab.sdsc.edu/yangli/downloads/mousebrain/Supplementary_Tables/Supplementary%20Table%202%20-%20Metatable%20of%20nuclei.tsv.zip'
     shell:
-        "wget -O {output.mat_nonN} {params.mat_nonN}; "
-        "wget -O {output.mat_GABA} {params.mat_GABA}; "
-        "wget -O {output.mat_GLUT} {params.mat_GLUT}; "
-        "wget -O {output.meta_nonN} {params.meta_nonN}; "
-        "wget -O {output.meta_GABA} {params.meta_GABA}; "
-        "wget -O {output.meta_GLUT} {params.meta_GLUT}; "
+        'wget -O {params.out_zip} {params.url} && '
+        'gunzip -c {params.out_zip} > {output}'
 
 rule download_snap_matrix:
     input:
@@ -57,66 +42,54 @@ rule download_snap_matrix:
         "cd {params.outdir}; "
         "wget -i {input.urls}; "
 
-
-rule gunzip_data:
+rule create_seurat_from_snap:
     input:
-        "results/scATAC_bingren/download/matrix_{sample}.tsv.gz"
+        snap = expand('results/scATAC_bingren/download/snap/{file}',file = get_filenames_from_url_txt(workflow_dir + '/config/bingren_snap_files.txt')),
+        metadata = 'results/scATAC_bingren/download/snap/metadata.tsv',
+        script = workflow_dir + '/scripts/snap_to_seurat.R'
     output:
-        "results/scATAC_bingren/download/matrix_{sample}.tsv"
-    shell:
-        "gunzip -c {input} > {output}"
-
-rule subset_matrix:
-    input:
-        matrix = "results/scATAC_bingren/download/matrix_{sample}.tsv",
-        script = workflow_dir + '/scripts/subset_bingren_scATAC.py'
-    output:
-        "results/scATAC_bingren/download/matrix_{sample}_subseted.tsv"
-    shell:
-        "python3 {input.script} {input.matrix} 0.1 {output}"
-
-rule create_seurat_object_bingren:
-    input:
-        matrix = "results/scATAC_bingren/download/matrix_{sample}_subseted.tsv",
-        metadata = "results/scATAC_bingren/download/meta_{sample}.tsv",
-        script = workflow_dir + '/scripts/create_seurat_bingren.R'
-    output:
-        seurat = "results/scATAC_bingren/seurat/Seurat_{sample}.Rds"
+        seurat = 'results/scATAC_bingren/seurat/Seurat_ATAC.Rds',
+        snap = 'results/scATAC_bingren/seurat/Seurat_ATAC_snap.Rds',
+        fragments = temp('results/scATAC_bingren/seurat/Seurat_ATAC_fragments.bed'),
     params:
-        modality = 'ATAC'
+        ncells = 50000,
+        log= 'results/scATAC_bingren/seurat/seurat.log'
     shell:
-        "Rscript {input.script} --matrix {input.matrix} --metadata {input.metadata} --out {output.seurat} --modality {params.modality}"
+        "Rscript {input.script} --snap {input.snap} --metadata {input.metadata} --ncells {params.ncells} --output {output.seurat} > {params.log}"
 
-rule merge_seurat_bingren:
+rule process_fragments_bed:
     input:
-        seurat = expand("results/scATAC_bingren/seurat/Seurat_{sample}.Rds",sample = ['nonN','GABA','GLUT']),
-        script = workflow_dir + '/scripts/merge_objects.R'
+        'results/scATAC_bingren/seurat/Seurat_ATAC_fragments.bed'
     output:
-        seurat = "results/scATAC_bingren/seurat/Seurat_merged.Rds"
+        bed = 'results/scATAC_bingren/seurat/Seurat_ATAC_fragments.bed.gz',
+        index = 'results/scATAC_bingren/seurat/Seurat_ATAC_fragments.bed.gz.tbi',
     shell:
-        'Rscript {input.script} -i {input.seurat} -o {output.seurat}'
+        'cut -f1-5 {input} | bgzip > {output.bed} && '
+        'tabix -p bed {output.bed}'
 
-rule cluster_merged_bingren:
+rule cluster_bingren:
     input:
-        seurat = "results/scATAC_bingren/seurat/Seurat_merged.Rds",
+        seurat = 'results/scATAC_bingren/seurat/Seurat_ATAC.Rds',
         script = workflow_dir + '/scripts/UMAP_cluster.R'
     output:
-        seurat = "results/scATAC_bingren/seurat/Seurat_merged_clustered.Rds"
+        seurat = 'results/scATAC_bingren/seurat/Seurat_ATAC_clustered.Rds',
     params:
-        assay = "GA",
-        ndim  = 40
+        assay = 'peaks',
+        ndim   = 40
     shell:
         'Rscript {input.script} -i {input.seurat} -o {output.seurat} -a {params.assay} -d {params.ndim} '
 
-rule integrate_bingren_CT:
+rule integrate_with_CT:
     input:
-        script    = workflow_dir + '/scripts/integrate_CT_ATAC.R',
-        reference = "results/scATAC_bingren/seurat/Seurat_{reference}.Rds",
-        query     = "results/multimodal_data/single_modality/{modality}/seurat/peaks/Seurat_object_clustered_renamed.Rds"
+        atac = 'results/scATAC_bingren/seurat/Seurat_ATAC_clustered.Rds',
+        ct = 'results/multimodal_data/single_modality/{modality}/seurat/{feature}/Seurat_object_clustered.Rds',
+        script = workflow_dir + '/scripts/integrate_CT_ATAC.R',
+        ref_frag = '/data/proj/GCB_MB/bcd_CT/single-cell/results/scATAC_bingren/seurat/Seurat_ATAC_fragments.bed.gz'
     output:
-        seurat = "results/multimodal_data/single_modality/{modality}/seurat/peaks/integration/integrated_with_ATAC_{reference}.Rds"
-    params:
-        reference_assay = 'GA',
-        query_assay     = 'GA'
+        integrated = 'results/multimodal_data/single_modality/{modality}/seurat/{feature}/integration/integrated_with_ATAC_{nfeatures}.Rds'
+    threads: 16
     shell:
-        "Rscript {input.script} --reference {input.reference} --reference_assay {params.reference_assay} --query {input.query} --query_assay {params.query_assay} --out {output.seurat}"
+        'Rscript {input.script} --reference {input.atac} --query {input.ct} '
+        '--reference_assay peaks --query_assay peaks '
+        '--reference_fragments {input.ref_frag} --out {output.integrated} '
+        '--reference_group MajorType --query_group seurat_clusters --downsample_features {wildcards.nfeatures}'

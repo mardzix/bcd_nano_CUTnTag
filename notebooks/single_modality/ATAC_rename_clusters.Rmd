@@ -221,19 +221,19 @@ idents_L3 <- c(
     '0' = 'Vascular endothelialal cells',
     '1' = 'Telencephalon Astrocytes',
     '2' = 'Non-telencephalon Astrocytes',
-    '3' = 'Neurons_1',
+    '3' = 'Excitatory Neurons 1',
     '4' = 'Oligodendrocytes',
-    '5' = 'Microglia_1',
-    '6' = 'Neuroblast_1',
+    '5' = 'Microglia',
+    '6' = 'Inhibitory Neurons 1',
     '7' = 'Choroid-ependymal cells',
     '8' = 'Vascular leptomeningeal cells',
-    '9' = 'Neurons_2',
+    '9' = 'Inhibitory Neurons 2',
     '10' = 'Bergmann glia',
-    '11' = 'Microglia_2',
-    '12' = 'OPC-COP',
+    '11' = 'Inhibitory Neurons 3',
+    '12' = 'Oligodendrocyte progenitor cells',
     '13' = 'SVZ Radial glia',
     '14' = 'Olfactory ensheating cells',
-    '15' = 'Neuroblast_2')
+    '15' = 'Excitatory Neurons 2')
 
 seurat.renamed                <- RenameIdents(seurat.renamed,idents_L3)
 seurat.renamed$idents_L3      <- seurat.renamed@active.ident
@@ -247,6 +247,40 @@ p4 <- DimPlot(seurat.renamed,label=TRUE,repel=TRUE,group.by='seurat_clusters',la
 
 p1+p2+p3+p4
 ```
+
+```{r rename_short, fig.width=24, fig.height=8}
+idents_short <- c(
+    '0' = 'VEC',
+    '1' = 'ACTE',
+    '2' = 'ACNT',
+    '3' = 'EXC1',
+    '4' = 'MOL',
+    '5' = 'MGL',
+    '6' = 'INH1',
+    '7' = 'CHOR-EPE',
+    '8' = 'VLMC',
+    '9' = 'INH2',
+    '10' = 'ACBG',
+    '11' = 'INH3',
+    '12' = 'OPC-COP',
+    '13' = 'RGC',
+    '14' = 'OEC',
+    '15' = 'EXC2')
+
+seurat.renamed                   <- RenameIdents(seurat.renamed,idents_short)
+seurat.renamed$idents_short      <- seurat.renamed@active.ident
+seurat.renamed                   <- SetIdent(seurat.renamed,cells = names(seurat.renamed$seurat_clusters), value = seurat.renamed$seurat_clusters)
+
+p1 <- DimPlot(seurat.renamed,label=TRUE,group.by = 'idents_L1',repel = TRUE) + NoLegend()
+p2 <- DimPlot(seurat.renamed,label=TRUE,group.by = 'idents_L2',repel = TRUE) + NoLegend()
+p3 <- DimPlot(seurat.renamed,label=TRUE,group.by = 'idents_L3',repel = TRUE) + NoLegend()
+p4 <- DimPlot(seurat.renamed,label=TRUE,group.by = 'idents_short',repel = TRUE) + NoLegend()
+p5 <- DimPlot(seurat.renamed,label=TRUE,repel=TRUE,group.by='seurat_clusters',label.size = 2.5) + NoLegend()
+
+
+p1+p3+p4
+```
+
 
 
 ```{r}
