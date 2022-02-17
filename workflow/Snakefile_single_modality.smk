@@ -1,5 +1,6 @@
 include: "Snakefile_preprocess.smk"
 
+idents = ['idents_L1','idents_L2','idents_L3','seurat_clusters','idents_short']
 
 def get_fragments_per_modality(modality, barcodes_dict):
     result = []
@@ -22,20 +23,20 @@ rule all_single_modality:
     input:
         expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/integration/integration_RNA.Rds', modality = antibodies_list, feature = 'peaks'),
         expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/Seurat_object_clustered_renamed.Rds',modality = antibodies_list, feature = 'peaks'), # TODO: use 'peaks' as variable
-        expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/bigwig/{idents}/', modality = antibodies_list, feature = 'peaks', idents = ['idents_L1','idents_L2','idents_L3','seurat_clusters']), # TODO: use 'peaks' and idents as variable
-        expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/markers/{idents}/markers.csv', modality = antibodies_list, feature = 'peaks', idents = ['idents_L1','idents_L2','idents_L3','seurat_clusters']),
+        expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/bigwig/{idents}/', modality = antibodies_list, feature = 'peaks', idents = idents), # TODO: use 'peaks' and idents as variable
+        expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/markers/{idents}/markers.csv', modality = antibodies_list, feature = 'peaks', idents = idents),
         expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/L3_niche_markers2/L3_markers.csv', modality = antibodies_list, feature = 'peaks'),
         # Bam files
         # ['results/{sample}/{antibody}_{barcode}/bam/possorted_bam_sampleID.bam'.format(sample=sample,antibody=antibody,barcode=barcodes_dict[sample][antibody]) for sample in samples_list  for antibody in barcodes_dict[sample].keys()],
         expand('results/multimodal_data/single_modality/{modality}/bam/possorted_bam_sampleID.bam',modality = antibodies_list),
-        expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/bam_per_cluster/{ident}/bam/',modality=antibodies_list,feature='peaks',ident=['idents_L1','idents_L2','idents_L3','seurat_clusters']),
-        expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/bam_per_cluster/{ident}/bigwig/',modality=antibodies_list,feature='peaks',ident=['idents_L1','idents_L2','idents_L3','seurat_clusters']),
+        expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/bam_per_cluster/{ident}/bam/',modality=antibodies_list,feature='peaks',ident = idents),
+        expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/bam_per_cluster/{ident}/bigwig/',modality=antibodies_list,feature='peaks',ident = idents),
 
 
 rule integrate_with_scRNA:
     input:
         seurat = 'results/multimodal_data/single_modality/{modality}/seurat/{feature}/Seurat_object_clustered.Rds',
-        rna    = '/data/proj/GCB_MB/single-cell-CUT-Tag/nbiotech_paper/analysis/results/Sten_RNA/clustering/01.clustering_20000cells.Rds', # TODO fix path here
+        rna    = '/data/proj/GCB_MB/single-cell-CUT-Tag/nbiotech_paper/analysis/results/Sten_RNA/clustering/01.clustering_20000cells.Rds', # TODO fix path here -> Config
         script = workflow_dir + '/scripts/integrate_CT_RNAseq.R'
     output:
         'results/multimodal_data/single_modality/{modality}/seurat/{feature}/integration/integration_RNA.Rds'
@@ -60,7 +61,7 @@ rule cluster_final_and_rename:
         "                                           modality = '{wildcards.modality}', "
         "                                           feature = '{wildcards.feature}', "
         "                                           input = '{params.out_prefix}{input.seurat}', "
-        "                                           integrated = '{input.integrated}', "                                  
+        "                                           integrated = '{params.out_prefix}{input.integrated}', "                # TODO - fix absolute paths integration                         
         "                                           output = '{params.out_prefix}{output.seurat}'))\" "
 
 

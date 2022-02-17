@@ -38,6 +38,9 @@ args <- parser$parse_args()
 # args$query_assay <- 'peaks'
 # args$reference_fragments <- '/data/proj/GCB_MB/bcd_CT/single-cell/results/scATAC_bingren/seurat/Seurat_ATAC_fragments.bed.gz'
 # args$out <- 'integration_test.Rds'
+# args$downsample_features = 5000
+# args$query_group <- 'idents_short'
+# args$reference_group <- 'MajorType'
 
 
 #######
@@ -55,6 +58,11 @@ seurat.reference$integration_ident <- 'reference'
 
 if (is(seurat.query[[args$query_assay]],'ChromatinAssay') && is(seurat.reference[[args$reference_assay]],'ChromatinAssay')){
   common.features.gr <- GenomicRanges::intersect(seurat.query[[args$query_assay]]@ranges, seurat.reference[[args$reference_assay]]@ranges)
+  if(length(common.features.gr) > args$downsample_features){
+    cat("*** Found",length(common.features.gr),"for integration -> too many, randomly sample ",args$downsample_features," features\n")
+    common.features.gr <- sample(common.features.gr,args$downsample_features)
+  } 
+  
   cat("*** Found",length(common.features.gr),"that will be used for integration\n")
   cat("*** Creating matrices for newly found features\n")
   if(length(Fragments(seurat.reference)) == 0){
@@ -71,48 +79,50 @@ if (is(seurat.query[[args$query_assay]],'ChromatinAssay') && is(seurat.reference
   matrix.integration.reference <- FeatureMatrix(fragments = Fragments(seurat.reference),
                                                 features = common.features.gr,
                                                 cells = Cells(seurat.reference))
-  seurat.query[['integration']]     <- CreateChromatinAssay(counts = matrix.integration.query,ranges = common.features.gr)
-  seurat.reference[['integration']] <- CreateChromatinAssay(counts = matrix.integration.reference,ranges = common.features.gr)
-  DefaultAssay(seurat.reference) <- 'integration'
-  DefaultAssay(seurat.query) <- 'integration'
   
-  seurat.query <- seurat.query %>% FindTopFeatures() %>% RunTFIDF()
-  seurat.reference <- seurat.reference %>% FindTopFeatures() %>% RunTFIDF()
+  seurat.query.integrated     <- CreateSeuratObject(counts = matrix.integration.query,assay = 'integration',meta.data = seurat.query@meta.data)
+  seurat.reference.integrated <- CreateSeuratObject(counts = matrix.integration.reference, assay = 'integration',meta.data = seurat.reference@meta.data)
+  
+  
+ # seurat.query[['integration']]     <- CreateChromatinAssay(counts = matrix.integration.query,ranges = common.features.gr)
+#  seurat.reference[['integration']] <- CreateChromatinAssay(counts = matrix.integration.reference,ranges = common.features.gr)
+  DefaultAssay(seurat.reference.integrated) <- 'integration'
+  DefaultAssay(seurat.query.integrated) <- 'integration'
+  
+  seurat.query.integrated     <- seurat.query.integrated %>% FindTopFeatures() %>% RunTFIDF()
+  seurat.reference.integrated <- seurat.reference.integrated %>% FindTopFeatures() %>% RunTFIDF()
 } 
-common.genes <- intersect(rownames(seurat.reference),rownames(seurat.query))
-if(length(common.genes) > args$downsample_features){
-  cat("*** Found",length(common.genes),"for integration -> too many, randomly sample ",args$downsample_features," features\n")
-  common.genes <- sample(common.genes,args$downsample_features)
-} 
 
-cat("*** Found",length(common.genes),"that will be used for integration\n")
+common.features <- intersect(rownames(seurat.reference.integrated),rownames(seurat.query.integrated))
+cat("*** Found",length(common.features),"that will be used for integration\n")
 
 
+# TODO - test if the whole datasets can be used to find anchors or subset also works well ? Is it faster with subset? 
 transfer.anchors <- FindTransferAnchors(
-  reference = seurat.reference,
-  query = seurat.query,
+  reference = seurat.reference.integrated,
+  query = seurat.query.integrated,
   reduction = 'cca',
-  k.filter = 200,features = common.genes
+  k.filter = 200,features = common.features
 )
 
-
-# genes.use <- intersect(rownames(seurat.reference),rownames(seurat.query))
-refdata <- GetAssayData(seurat.reference, slot = "data")
+refdata <- GetAssayData(seurat.reference.integrated, slot = "data")
 
 imputation <- TransferData(anchorset = transfer.anchors, refdata = refdata, weight.reduction = seurat.query[["lsi"]],dims = 2:40)
 
-seurat.query[['integrated']]     <- imputation
-seurat.reference[['integrated']] <- seurat.reference[[DefaultAssay(seurat.reference)]]
+seurat.query.integrated[['integrated']]     <- imputation
+seurat.reference.integrated[['integrated']] <- GetAssay(seurat.reference.integrated,DefaultAssay(seurat.reference.integrated))
 
+if("GA" %in% Assays(seurat.query)){seurat.query.integrated[['GA']] <- seurat.query[['GA']]}
+if("GA" %in% Assays(seurat.reference)){seurat.reference.integrated[['GA']] <- seurat.reference.integrated[['GA']]}
 
-coembed               <- merge(x = seurat.reference, y = seurat.query)
+coembed               <- merge(x = seurat.reference.integrated, y = seurat.query.integrated)
 DefaultAssay(coembed) <- 'integrated'
 
-coembed <- RunSVD(coembed, features = common.genes, verbose = FALSE)
+coembed <- RunSVD(coembed, features = common.features, verbose = FALSE)
 coembed <- RunUMAP(coembed, dims = 2:40,reduction='lsi')
 
-p1 <- DimPlot(coembed[,coembed$integration_ident=='reference'],label=TRUE) + NoLegend()
-p2 <- DimPlot(coembed[,coembed$integration_ident=='query'],label=TRUE) + NoLegend()
+p1 <- DimPlot(coembed[,coembed$integration_ident=='reference'],label=TRUE,group.by = args$reference_group) + NoLegend()
+p2 <- DimPlot(coembed[,coembed$integration_ident=='query'],label=TRUE,group.by=args$query_group) + NoLegend()
 p1+p2
 
 ggsave(filename = paste0(args$out,'.png'),plot = p1+p2,width=20,height=10)

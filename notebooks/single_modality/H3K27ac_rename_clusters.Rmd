@@ -123,7 +123,7 @@ idents_L1 <- c(
   '18' = 'Olfactory ensheating cells',
   '19' = 'Astroependymal',
   '20' = 'Neurons',
-  '21' = 'Choroid plexus',
+  '21' = 'Astroependymal',
   '22' = 'Neurons',
   '23' = 'Vascular',
   '24' = 'Astroependymal', # Ependymal cells
@@ -152,34 +152,34 @@ VlnPlot(seurat,'Gad1')
 
 ```{r rename_L2, fig.width=12,fig.height=4}
 idents_L2 <- c(
-  '0' = 'Astrocytes_1',
-  '1' = 'Astrocytes_2',
+  '0' = 'Astrocytes',
+  '1' = 'Astrocytes',
   '2' = 'Vascular Endothelial cells',
   '3' = 'Oligodendrocytes',
-  '4' = 'Microglia_1',
-  '5' = 'Neurons_Excitatory_1',
-  '6' = 'Neurons_Excitatory_2',
-  '7' = 'Neurons_Inhibitory_1',
+  '4' = 'Microglia',
+  '5' = 'Neurons_Excitatory',
+  '6' = 'Neurons_Excitatory',
+  '7' = 'Neurons_Inhibitory',
   '8' = 'Bergman glia', 
-  '9' = 'Microglia_2', 
+  '9' = 'Microglia', 
   '10' = 'Immature Oligodendrocytes',
   '11' = 'Radial glial cells', 
-  '12' = 'Neurons_Inhibitory_2',
+  '12' = 'Neurons_Inhibitory',
   '13' = 'Pericytes',
-  '14' = 'Neurons_Inhibitory_3',
+  '14' = 'Neurons_Inhibitory',
   '15' = 'Macrophages',
   '16' = 'Vascular leptomeningeal cells',
-  '17' = 'Astrocytes_3',
+  '17' = 'Astrocytes',
   '18' = 'Olfactory ensheating cells',
-  '19' = 'Astrocytes_4',
-  '20' = 'Neurons_TODO',
+  '19' = 'Astrocytes',
+  '20' = 'Neurons_ExcitatoryF',
   '21' = 'Choroid plexus',
-  '22' = 'Neurons_Inhibitory_4',
+  '22' = 'Neurons_Inhibitory',
   '23' = 'Vascular smooth muscle cells',
   '24' = 'Ependymal cells',
-  '25' = 'Immune_TODO',
+  '25' = 'Microglia',
   '26' = 'Arachnoid bareer cells',
-  '27' = 'Neurons_Excitatory_3'
+  '27' = 'Neurons_Excitatory'
 )
 
 seurat.renamed                <- RenameIdents(seurat.renamed,idents_L2)
@@ -220,14 +220,14 @@ idents_L3 <- c(
   '17' = 'Astrocytes_3',
   '18' = 'Olfactory ensheating cells',
   '19' = 'Astrocytes_4',
-  '20' = 'Neurons_TODO',
+  '20' = 'Neurons_Excitatory_3',
   '21' = 'Choroid plexus',
   '22' = 'Neurons_Inhibitory_4',
   '23' = 'Vascular smooth muscle cells',
   '24' = 'Ependymal cells',
-  '25' = 'Immune_TODO',
+  '25' = 'Microglia_3',
   '26' = 'Arachnoid bareer cells',
-  '27' = 'Neurons_Excitatory_3'
+  '27' = 'Neurons_Excitatory_4'
 )
 
 seurat.renamed                <- RenameIdents(seurat.renamed,idents_L3)
@@ -244,7 +244,7 @@ p4 <- DimPlot(seurat.renamed,label=TRUE,repel=TRUE,group.by='seurat_clusters',la
 p1+p3+p4
 ```
 
-```{r rename_short, fig.width=12,fig.height=4,eval=FALSE}
+```{r rename_short, fig.width=12,fig.height=4,eval=TRUE}
 idents_short <- c(
   '0' = 'AST_TE',
   '1' = 'AST_NT',
@@ -266,14 +266,14 @@ idents_short <- c(
   '17' = 'AST3',
   '18' = 'OEC',
   '19' = 'AST4',
-  '20' = 'NEU',
+  '20' = 'EXC3',
   '21' = 'CHP',
   '22' = 'INH4',
   '23' = 'VSMC',
   '24' = 'EPE',
-  '25' = 'IMM',
+  '25' = 'MGL3',
   '26' = 'ABC',
-  '27' = 'EXC3'
+  '27' = 'EXC4'
 )
 
 seurat.renamed                   <- RenameIdents(seurat.renamed,idents_short)

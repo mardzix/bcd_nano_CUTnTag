@@ -4,6 +4,13 @@
   <component name="RMarkdownSettings">
     <option name="renderProfiles">
       <map>
+        <entry key="file://$PROJECT_DIR$/notebooks/devel/multimodal/WNN_multimodal.RMd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/notebooks/devel/multimodal" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
         <entry key="file://$PROJECT_DIR$/notebooks/pick_cells_summarize.Rmd">
           <value>
             <RMarkdownRenderProfile>
@@ -29,6 +36,13 @@
           <value>
             <RMarkdownRenderProfile>
               <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/notebooks/single_modality" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="vcs://notebooks/devel/WNN_multimodal.RMd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="vcs://notebooks/devel" />
             </RMarkdownRenderProfile>
           </value>
         </entry>

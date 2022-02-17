@@ -21,3 +21,6 @@ rule merged_multiple_modalities:
 
     shell:
         'Rscript {input.script} -i {input.seurat} -m {wildcards.combination} -o {output}'
+
+rule run_WNN:
+    input:

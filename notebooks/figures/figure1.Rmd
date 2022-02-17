@@ -28,6 +28,22 @@ nbiotech$method       <- 'scCT'
 sequential$method     <- 'sequential'
 ```
 
+```{r Fig1e_plot_UMAP_sequential}
+p1 <- DimPlot(sequential) + NoLegend()
+p2 <- DimPlot(sequential,label=TRUE) + NoLegend()
+
+p3 <- DimPlot(nbiotech,group.by = 'cell_type') + NoLegend()
+p4 <- DimPlot(nbiotech,group.by = 'cell_type',label=TRUE) + NoLegend()
+
+p1+p2
+p3+p4
+
+dir.create(paste0(params$out_folder,'/figures/figure_1/'),recursive = TRUE)
+ggsave(plot = p1, filename = paste0(params$out_folder,'/figures/figure_1/UMAP_seq_Unintegrated.png'),width=4,height=4)
+ggsave(plot = p3, filename = paste0(params$out_folder,'/figures/figure_1/UMAP_nbiot_Unintegrated.png'),width=4,height=4)
+```
+
+
 ```{r merge_UMAP,fig.width=6,fig.height=6}
 merged <- merge(nbiotech,sequential)
 DefaultAssay(merged) <- 'bins_5000'
@@ -41,7 +57,7 @@ merged <- RunUMAP(merged,dims = 2:40,reduction = 'lsi')
 DimPlot(merged)
 ```
 
-```{r figure, fig.width=6,fig.height=3}
+```{r figure_1f, fig.width=6,fig.height=3}
 p1 <- DimPlot(merged[,merged$method=='scCT'],label=TRUE,pt.size=0.2) + NoLegend()
 p2 <- DimPlot(merged[,merged$method=='sequential'],label=TRUE,pt.size=0.2) + NoLegend()
 
@@ -58,89 +74,20 @@ dev.off()
 p2
 ```
 
-```{r}
+```{r Fig1d_UMI_plot}
 levels(merged@active.ident)[1:13] <- sort(as.numeric(levels(merged@active.ident)[1:13]))
 p1 <- VlnPlot(object = merged,features = 'logUMI', split.by = 'method',pt.size = 0) + ggtitle("") + xlab("")
 p2 <- VlnPlot(object = merged,features = 'logUMI', split.by = 'method',pt.size = 0,group.by = 'method') + ggtitle("") + xlab("")
 
 ggsave(plot = p1,paste0(params$out_folder,'/figures/figure_1/logUMI_plot1.pdf'),width=6,height=3)
 ggsave(plot = p2,paste0(params$out_folder,'/figures/figure_1/logUMI_plot2.pdf'),width=3,height=6)
-```
 
-```{r}
-p1 <- DimPlot(merged,group.by = 'method',repel=TRUE,pt.size=0.2) + theme(legend.position = 'top') + ggtitle("")
 p1
-ggsave(plot = p1,paste0(params$out_folder,'/figures/figure_1/UMAP_by_method.pdf'),width=4,height=4)
+p2
 ```
 
 
-```{r}
-markers.all <- FindAllMarkers(object = nbiotech,assay = 'bins_5000',min.pct = 0.05)
-markers.all.2 <- FindAllMarkers(object = sequential,assay = 'bins_5000',min.pct = 0.2)
-
-library(dplyr)
-n=20
-markers.top <- markers.all  %>% filter(avg_log2FC > 0.5) %>% group_by(cluster) %>% top_n(n = n,wt = -p_val_adj) 
-markers.top.2 <- markers.all.2  %>% filter(avg_log2FC > 0.5) %>% group_by(cluster) %>% top_n(n = n,wt = -p_val_adj) 
-```
-
-```{r}
-library(RColorBrewer)
-library(viridis)
-
-pal <- viridis(10)
-pal
-
-DefaultAssay(nbiotech) <- 'bins_5000'
-p1 <- Seurat::DoHeatmap(object = nbiotech,features = markers.top$gene,slot = 'data')  + scale_fill_viridis_c()
-p2 <- Seurat::DoHeatmap(object = nbiotech,features = markers.top.2$gene,slot = 'data')  + scale_fill_viridis_c()
-
-```
-
-
-```{r}
-
-DefaultAssay(sequential) <- 'bins_5000'
-
-p3 <- Seurat::DoHeatmap(object = sequential, features = markers.top$gene,slot = 'data')  + scale_fill_viridis_c()
-p4 <- Seurat::DoHeatmap(object = sequential, features = markers.top.2$gene,slot = 'data')  + scale_fill_viridis_c()
-```
-
-```{r}
-
-ggsave(plot=p1,filename = paste0(params$out_folder,'/figures/figure_1/markers_heatmap_1.pdf'),width=8,height=4)
-ggsave(plot=p4,filename = paste0(params$out_folder,'/figures/figure_1/markers_heatmap_2.pdf'),width=12,height=4)
-```
-
-
-
-
-
-```{r}
-library(dplyr)
-n=100
-markers.top <- markers.all  %>% filter(avg_log2FC > 0.5) %>% group_by(cluster) %>% top_n(n = n,wt = -p_val_adj) 
-markers.top.2 <- markers.all.2  %>% filter(avg_log2FC > 0.5) %>% group_by(cluster) %>% top_n(n = n,wt = -p_val_adj) 
-
-markers.top$method <- 'scCT'
-markers.top.2$method <- 'nano-scCT'
-
-df.to.plot <- rbind(markers.top,markers.top.2)
-colnames(df.to.plot)
-
-p <- ggplot(data=df.to.plot,aes(x=method,y=  pct.1)) + geom_boxplot(aes(fill=method),outlier.shape=NA) + theme_bw() + coord_cartesian(ylim=c(0,0.5)) + ylab("Percentage of cells with signal") + xlab("") + NoLegend()
-ggplot(data=df.to.plot,aes(x=method,y=  pct.2)) + geom_boxplot(aes(fill=method),outlier.shape=NA) + theme_bw() + coord_cartesian(ylim=c(0,0.5)) + ylab("Percentage of cells with signal") + xlab("")
-
-ggsave(plot=p,filename=paste0(params$out_folder,'/figures/figure_1/markers_dropout_percentage.pdf'),width=2,height=2) 
-
-aggregate(df.to.plot$pct.1,by=list(df.to.plot$method),FUN=function(x){median(x)})
-aggregate(df.to.plot$pct.2,by=list(df.to.plot$method),FUN=function(x){median(x)})
-
-aggregate(df.to.plot$pct.1,by=list(df.to.plot$method),FUN=function(x){median(x)})$x / aggregate(df.to.plot$pct.2,by=list(df.to.plot$method),FUN=function(x){median(x)})$x
-```
-
-
-```{r}
+```{r Extended_Figure_1d_frip_plot}
 nbiotech.samples <- paste0("H3K27me3_N",c(1,2,3,4))
 nbiotech.files   <- paste0(params$out_folder,'/nbiotech_data/',nbiotech.samples,'/seurat/bin_5000/Seurat_object.Rds')
 
@@ -163,6 +110,74 @@ ggsave(filename = paste0(params$out_folder,'/figures/figure_1/frip_nbiotech_sequ
 aggregate(x=df.to.plot$frip,by=list(df.to.plot$method),FUN=median)
 ```
 
+
+
+
+
+```{r integration_by_sample_Ext_figure_1c}
+p1 <- DimPlot(merged,group.by = 'method',repel=TRUE,pt.size=0.2) + theme(legend.position = 'top') + ggtitle("")
+p1
+ggsave(plot = p1,paste0(params$out_folder,'/figures/figure_1/UMAP_by_method.pdf'),width=4,height=4)
+```
+
+
+```{r}
+markers.all <- FindAllMarkers(object = nbiotech,assay = 'bins_5000',min.pct = 0.05)
+markers.all.2 <- FindAllMarkers(object = sequential,assay = 'bins_5000',min.pct = 0.2)
+
+library(dplyr)
+n=20
+markers.top <- markers.all  %>% filter(avg_log2FC > 0.5) %>% group_by(cluster) %>% top_n(n = n,wt = -p_val_adj) 
+markers.top.2 <- markers.all.2  %>% filter(avg_log2FC > 0.5) %>% group_by(cluster) %>% top_n(n = n,wt = -p_val_adj) 
+```
+
+```{r extended_figure_2a_Heatmaps}
+library(RColorBrewer)
+library(viridis)
+
+pal <- viridis(10)
+pal
+
+DefaultAssay(nbiotech) <- 'bins_5000'
+p1 <- Seurat::DoHeatmap(object = nbiotech,features = markers.top$gene,slot = 'data')  + scale_fill_viridis_c()
+p2 <- Seurat::DoHeatmap(object = nbiotech,features = markers.top.2$gene,slot = 'data')  + scale_fill_viridis_c()
+
+DefaultAssay(sequential) <- 'bins_5000'
+p3 <- Seurat::DoHeatmap(object = sequential, features = markers.top$gene,slot = 'data')  + scale_fill_viridis_c()
+p4 <- Seurat::DoHeatmap(object = sequential, features = markers.top.2$gene,slot = 'data')  + scale_fill_viridis_c()
+
+ggsave(plot=p1,filename = paste0(params$out_folder,'/figures/figure_1/markers_heatmap_1.pdf'),width=8,height=4)
+ggsave(plot=p4,filename = paste0(params$out_folder,'/figures/figure_1/markers_heatmap_2.pdf'),width=12,height=4)
+```
+
+```{r extended_figure_2b_markers_dropouts}
+library(dplyr)
+n=100
+markers.top <- markers.all  %>% filter(avg_log2FC > 0.5) %>% group_by(cluster) %>% top_n(n = n,wt = -p_val_adj) 
+markers.top.2 <- markers.all.2  %>% filter(avg_log2FC > 0.5) %>% group_by(cluster) %>% top_n(n = n,wt = -p_val_adj) 
+
+markers.top$method <- 'scCT'
+markers.top.2$method <- 'nano-scCT'
+
+df.to.plot <- rbind(markers.top,markers.top.2)
+colnames(df.to.plot)
+
+p <- ggplot(data=df.to.plot,aes(x=method,y=  pct.1)) + geom_boxplot(aes(fill=method),outlier.shape=NA) + theme_bw() + coord_cartesian(ylim=c(0,0.5)) + ylab("Percentage of cells with signal") + xlab("") + NoLegend()
+# ggplot(data=df.to.plot,aes(x=method,y=  pct.2)) + geom_boxplot(aes(fill=method),outlier.shape=NA) + theme_bw() + coord_cartesian(ylim=c(0,0.5)) + ylab("Percentage of cells with signal") + xlab("")
+p
+ggsave(plot=p,filename=paste0(params$out_folder,'/figures/figure_1/markers_dropout_percentage.pdf'),width=2,height=2) 
+
+aggregate(df.to.plot$pct.1,by=list(df.to.plot$method),FUN=function(x){median(x)})
+aggregate(df.to.plot$pct.2,by=list(df.to.plot$method),FUN=function(x){median(x)})
+
+aggregate(df.to.plot$pct.1,by=list(df.to.plot$method),FUN=function(x){median(x)})$x / aggregate(df.to.plot$pct.2,by=list(df.to.plot$method),FUN=function(x){median(x)})$x
+```
+
+
+
+```{r}
+
+```
 
 
 

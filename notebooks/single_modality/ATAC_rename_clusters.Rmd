@@ -255,7 +255,7 @@ idents_short <- c(
     '7' = 'INH2',
     '8' = 'VLMC',
     '9' = 'BG',
-    '10' = 'CHOR-EPE',
+    '10' = 'CHP-EPE',
     '11' = 'OPC',
     '12' = 'OEC',
     '13' = 'RGC',

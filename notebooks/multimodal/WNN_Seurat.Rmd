@@ -2,12 +2,13 @@
 title: "R Notebook"
 output: html_notebook
 params:
-  out_prefix: "/data/proj/GCB_MB/bcd_CT/single-cell/results/"
   seurat: "/data/proj/GCB_MB/bcd_CT/single-cell/results/multiple_modalities/ATAC_H3K27ac_H3K27me3/seurat_multimodal/peaks/Seurat_object.Rds"
+  output: "/data/proj/GCB_MB/bcd_CT/single-cell/results/multimodal/WNN/seurat/Seurat_object_WNN.Rds"
 ---
 
 
 ```{r}
+
 library(Seurat)
 library(Signac)
 library(ggplot2)

@@ -139,30 +139,30 @@ p1+p2
 
 ```{r rename_L2, fig.width=12,fig.height=4}
 idents_L2 <- c(
-  '0' = 'Astrocytes_1',
-  '1' = 'Astrocytes_2',
-  '2' = 'Vascular_1',
-  '3' = 'Microglia_1',
+  '0' = 'Astrocytes',
+  '1' = 'Astrocytes',
+  '2' = 'Vascular',
+  '3' = 'Microglia',
   '4' = 'Oligodendrocytes',
-  '5' = 'Neurons_Excitatory_1',
-  '6' = 'Neurons_Excitatory_2',
-  '7' = 'Neurons_Excitatory_3',
-  '8' = 'Astrocytes_2',
-  '9' = 'Neurons_Inhibitory_1',
+  '5' = 'Neurons_Excitatory',
+  '6' = 'Neurons_Excitatory',
+  '7' = 'Neurons_Excitatory',
+  '8' = 'Astrocytes',
+  '9' = 'Neurons_Inhibitory',
   '10' = 'Bergman glia',
-  '11' = 'Microglia_2',
+  '11' = 'Microglia',
   '12' = 'Vascular leptomeningeal cells',
   '13' = 'Macrophages',
   '14' = 'Pericytes',
-  '15' = 'Neuron_Inhibitory_2',
-  '16' = 'Neurons_Inhibitory_3',
+  '15' = 'Neuron_Inhibitory',
+  '16' = 'Neurons_Inhibitory',
   '17' = 'Olfactory ensheating cells',
   '18' = 'Oligodendrocyte progenitor cells',
-  '19' = 'Astrocytes_3',
+  '19' = 'Astrocytes',
   '20' = 'Choroid plexus',
-  '21' = 'Neurons_Inhibitory_4',
+  '21' = 'Neurons_Inhibitory',
   '22' = 'Ependymal cells',
-  '23' = 'Neurons_Excitatory_4'
+  '23' = 'Neurons_Excitatory'
 )
 
 
@@ -181,8 +181,8 @@ p1+p2+p3
 
 ```{r rename_L3, fig.width=12,fig.height=4}
 idents_L3 <- c(
-  '0' = 'Astrocytes_Non-Telencephalon',
-  '1' = 'Astrocytes_Telencephalon',
+  '0' = 'Astrocytes_Telencephalon',
+  '1' = 'Astrocytes_Non-Telencephalon',
   '2' = 'Vascular Endothelial cells',
   '3' = 'Microglia_1',
   '4' = 'Oligodendrocytes',
@@ -224,8 +224,8 @@ p1+p3+p4
 
 ```{r rename_L3, fig.width=12,fig.height=4}
 idents_short <- c(
-  '0' = 'AST_TE',
-  '1' = 'AST_NT',
+  '0' = 'AST_NT',
+  '1' = 'AST_TE',
   '2' = 'VEC',
   '3' = 'MGL1',
   '4' = 'MOL',

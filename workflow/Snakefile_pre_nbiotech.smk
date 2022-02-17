@@ -18,7 +18,10 @@ localrules: nbiotech_fastq_dump
 rule nbiotech_all:
     input:
         expand('results/nbiotech_data/cellranger/{sample}/outs/possorted_bam.bam', sample= samples_list),
-        expand('results/nbiotech_data/{sample}/seurat/bin_{binwidth}/Seurat_object.Rds', sample = samples_list,binwidth=5000)
+        expand('results/nbiotech_data/{sample}/seurat/bin_{binwidth}/Seurat_object.Rds', sample = samples_list,binwidth=5000),
+
+        # Seurat direct download
+        'results/nbiotech_data/data/seurat/H3K27me3_seurat_object.Rds'
 
 rule nbiotech_fastq_dump:
     output:
@@ -214,4 +217,21 @@ rule nbiotech_create_seurat_object:
     shell:
         "Rscript {input.script} --sample {wildcards.sample} --antibody {params.antibody} --metadata {input.metadata}  --fragments {input.fragments} --peaks {input.peaks} --out_prefix {params.out_prefix} --window {wildcards.binwidth} --genome_version {params.genome}"
 
+rule download_seurat_objects:
+    output:
+        'results/nbiotech_data/data/seurat/GSE163532_RAW.tar'
+    params:
+        url = config['nbiotech_data']['url']['seurat']
+    shell:
+        'wget -O {output} {params.url}'
+
+rule untar_seurat:
+    input:
+        archive  = 'results/nbiotech_data/data/seurat/GSE157637_Seurat_v3_object.tar.gz'
+    output:
+        H3K27me3 = 'results/nbiotech_data/data/seurat/H3K27me3_seurat_object.Rds'
+    params:
+        outdir   = 'results/nbiotech_data/data/seurat/'
+    shell:
+        'tar -xvzf {input.archive}; '
 
