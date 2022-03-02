@@ -3,7 +3,7 @@ title: "R Notebook"
 output: html_notebook
 params:
   seurat: "/data/proj/GCB_MB/bcd_CT/single-cell/results/multiple_modalities/ATAC_H3K27ac_H3K27me3/seurat_multimodal/peaks/Seurat_object.Rds"
-  output: "/data/proj/GCB_MB/bcd_CT/single-cell/results/multimodal/WNN/seurat/Seurat_object_WNN.Rds"
+  output: "/data/proj/GCB_MB/bcd_CT/single-cell/results/multimodal_data/WNN/seurat/Seurat_object_WNN.Rds"
 ---
 
 
@@ -13,6 +13,7 @@ library(Seurat)
 library(Signac)
 library(ggplot2)
 library(dplyr)
+library(gridExtra)
 set.seed(1234)
 
 ```
@@ -51,17 +52,17 @@ for(x in modalities){
 
 seurat.wnn <- FindMultiModalNeighbors(
   seurat.wnn, reduction.list = list("ATAC_lsi","H3K27ac_lsi", "H3K27me3_lsi"), 
-  dims.list = list(2:25,2:30, 2:30), modality.weight.name = "histone.weight",k.nn = 10
+  dims.list = list(2:30,2:50, 2:50), modality.weight.name = "histone.weight",k.nn = 10
 )
 
 seurat.wnn <- RunUMAP(seurat.wnn, nn.name = "weighted.nn", reduction.name = "wnn.umap", reduction.key = "wnnUMAP_")
 seurat.wnn <- FindClusters(seurat.wnn, graph.name = "wsnn", algorithm = 3, resolution = 0.8, verbose = FALSE)
 
-DimPlot(seurat.wnn,label=TRUE)
 
 FeaturePlot(seurat.wnn,'peaks_ATAC.weight',min.cutoff = 0.2,max.cutoff = 0.6) + scale_color_viridis_c()
 FeaturePlot(seurat.wnn,'peaks_H3K27ac.weight',min.cutoff = 0.2,max.cutoff = 0.6) + scale_color_viridis_c()
 FeaturePlot(seurat.wnn,'peaks_H3K27me3.weight',min.cutoff = 0.2,max.cutoff = 0.6) + scale_color_viridis_c()
+DimPlot(seurat.wnn,label=TRUE)
 ```
 
 
@@ -86,34 +87,31 @@ do.call('grid.arrange',p)
 
 
 
-```{r,fig.width=15,fig.height=5}
-seurat.wnn <- AddMetaData(seurat.wnn,seurat[[1]]$idents_L3,col.name = 'H3K27ac_cluster_idents')
-p1 <- DimPlot(seurat.wnn,group.by='H3K27ac_cluster_idents',label=TRUE,repel=TRUE) + NoLegend()
+```{r,fig.width=20,fig.height=5}
+seurat.wnn <- AddMetaData(seurat.wnn,seurat[['H3K27ac']]$idents_short,col.name = 'H3K27ac_cluster_idents')
+p2 <- DimPlot(seurat.wnn,group.by='H3K27ac_cluster_idents',label=TRUE,repel=TRUE) + NoLegend()
 
-seurat.wnn <- AddMetaData(seurat.wnn,seurat[[2]]$idents_L3,col.name = 'H3K27me3_cluster_idents')
-p2 <- DimPlot(seurat.wnn,group.by='H3K27me3_cluster_idents',label=TRUE,repel=TRUE) + NoLegend()
+seurat.wnn <- AddMetaData(seurat.wnn,seurat[['H3K27me3']]$idents_short,col.name = 'H3K27me3_cluster_idents')
+p3 <- DimPlot(seurat.wnn,group.by='H3K27me3_cluster_idents',label=TRUE,repel=TRUE) + NoLegend()
 
-seurat.wnn <- AddMetaData(seurat.wnn,seurat[[3]]$idents_L3,col.name = 'ATAC_cluster_idents')
-p3 <- DimPlot(seurat.wnn,group.by='ATAC_cluster_idents',label=TRUE,repel=TRUE) + NoLegend()
+seurat.wnn <- AddMetaData(seurat.wnn,seurat[['ATAC']]$idents_short,col.name = 'ATAC_cluster_idents')
+p1 <- DimPlot(seurat.wnn,group.by='ATAC_cluster_idents',label=TRUE,repel=TRUE) + NoLegend()
 
+p4 <-  DimPlot(seurat.wnn,group.by='seurat_clusters',label=TRUE,repel=TRUE) + NoLegend() + ggtitle("WNN clusters")
 
-p1+p2+p3
+grid.arrange(p1,p2,p3,p4, nrow=1)
 ```
 
 
 `
 ```{r}
-VlnPlot(seurat.wnn, features = "peaks_H3K27ac.weight", sort = TRUE, pt.size = 0.1,group.by="H3K27me3.idents_L3")  + NoLegend()
-VlnPlot(seurat.wnn, features = "peaks_H3K27me3.weight", sort = TRUE, pt.size = 0.1,group.by="H3K27me3.idents_L3")  + NoLegend() 
-VlnPlot(seurat.wnn, features = "peaks_ATAC.weight", sort = TRUE, pt.size = 0.1,group.by="H3K27me3.idents_L3")   + NoLegend()
+VlnPlot(seurat.wnn, features = "peaks_H3K27ac.weight", sort = TRUE, pt.size = 0.1,group.by="H3K27me3.idents_L1")  + NoLegend()
+VlnPlot(seurat.wnn, features = "peaks_H3K27me3.weight", sort = TRUE, pt.size = 0.1,group.by="H3K27me3.idents_L1")  + NoLegend() 
+VlnPlot(seurat.wnn, features = "peaks_ATAC.weight", sort = TRUE, pt.size = 0.1,group.by="H3K27me3.idents_L1")   + NoLegend()
 
-VlnPlot(seurat.wnn, features = "peaks_H3K27ac.weight", sort = TRUE, pt.size = 0.1,group.by="H3K27ac.idents_L3")  + NoLegend()
-VlnPlot(seurat.wnn, features = "peaks_H3K27me3.weight", sort = TRUE, pt.size = 0.1,group.by="H3K27ac.idents_L3")  + NoLegend() 
-VlnPlot(seurat.wnn, features = "peaks_ATAC.weight", sort = TRUE, pt.size = 0.1,group.by="H3K27ac.idents_L3")   + NoLegend()
-
-VlnPlot(seurat.wnn, features = "peaks_H3K27ac.weight", sort = TRUE, pt.size = 0.1,group.by="ATAC.idents_L3")  + NoLegend()
-VlnPlot(seurat.wnn, features = "peaks_H3K27me3.weight", sort = TRUE, pt.size = 0.1,group.by="ATAC.idents_L3")  + NoLegend() 
-VlnPlot(seurat.wnn, features = "peaks_ATAC.weight", sort = TRUE, pt.size = 0.1,group.by="ATAC.idents_L3")   + NoLegend()
+VlnPlot(seurat.wnn, features = "peaks_H3K27ac.weight", sort = TRUE, pt.size = 0.1,group.by="H3K27ac.idents_short")  + NoLegend()
+VlnPlot(seurat.wnn, features = "peaks_H3K27me3.weight", sort = TRUE, pt.size = 0.1,group.by="H3K27ac.idents_short")  + NoLegend() 
+VlnPlot(seurat.wnn, features = "peaks_ATAC.weight", sort = TRUE, pt.size = 0.1,group.by="H3K27ac.idents_short")   + NoLegend()
 
 ```
 
@@ -131,29 +129,223 @@ lapply(seurat[1:3],function(x){
 })
 ```
 
+```{r, fig.width=12,fig.height=4}
+p1 <- DimPlot(seurat.wnn,group.by = 'ATAC.idents_short',label=TRUE) + NoLegend()
+p2 <- DimPlot(seurat.wnn,group.by = 'H3K27ac.idents_short',label=TRUE) + NoLegend()
+p3 <- DimPlot(seurat.wnn,group.by = 'H3K27me3.idents_short',label=TRUE) + NoLegend()
+p4 <- DimPlot(seurat.wnn,label=TRUE) + NoLegend()
+p1+p2+p4
+```
 
-```{r}
-seurat <- readRDS(file=params$seurat)
 
-DefaultAssay(seurat[['merged']]) <- 'peaks'
-seurat[['merged']] <- seurat[['merged']] %>% RunTFIDF() %>% FindTopFeatures() %>% RunSVD() 
+```{r rename_WNN_L1, fig.width=8,fig.height=4}
 
-seurat[['merged']] <- RunUMAP(object = seurat[['merged']], dims=2:50,reduction = 'lsi')
-seurat[['merged']] <- FindNeighbors(seurat[['merged']],reduction = 'lsi',dims = 2:50) %>% FindClusters()
+idents_L1 <- c(
+  '0' = 'Astroependymal',
+  '1' = 'Astroependymal',
+  '2' = 'Neurons',
+  '3' = 'Vascular',
+  '4' = 'Oligodendrocytes',
+  '5' = 'Immune',
+  '6' = 'Vascular',
+  '7' = 'Astroependymal',
+  '8' = 'Neurons',
+  '9' = 'Oligodendrocytes',
+  '10' = 'Astroependymal',
+  '11' = 'Olfactory ensheating cells',
+  '12' = 'Immune',
+  '13' = 'Vascular',
+  '14' = 'Neurons',
+  '15' = 'Neurons',
+  '16' = 'Vascular',
+  '17' = 'Vascular',
+  '18' = 'Astroependymal',
+  '19' = 'Neurons',
+  '20' = 'Astroependymal',
+  '21' = 'Neurons',
+  '22' = 'Neurons',
+  '23' = 'Vascular',
+  '24' = 'Astroependymal',
+  '25' = 'Neurons'
+)
 
-DimPlot(seurat[['merged']],label=TRUE) + NoLegend()
+seurat.wnn                 <- RenameIdents(seurat.wnn,idents_L1)
+seurat.wnn$idents_L1    <- seurat.wnn@active.ident
+seurat.wnn                 <- SetIdent(seurat.wnn,cells = names(seurat.wnn$seurat_clusters), value = seurat.wnn$seurat_clusters)
+
+p1 <- DimPlot(seurat.wnn,label=TRUE,group.by = 'idents_L1') + NoLegend()
+p2 <- DimPlot(seurat.wnn,label=TRUE, group.by = 'seurat_clusters') + NoLegend()
+
+p1+p2
+
+```
+
+
+```{r rename_WNN_L2, fig.width=8,fig.height=4}
+
+idents_L2 <- c(
+  '0' = 'Astrocytes',
+  '1' = 'Astrocytes',
+  '2' = 'Neurons_Excitatory',
+  '3' = 'Vascular_endothelial_cells',
+  '4' = 'Mature_oligodendrocytes',
+  '5' = 'Microglia',
+  '6' = 'Vascular_endothelial_cells',
+  '7' = 'Bergman_glia',
+  '8' = 'Inhibitory_neurons',
+  '9' = 'Oligodendrocyte_progenitor_cells',
+  '10' = 'Radial_glial_cells',
+  '11' = 'Olfactory_ensheating_cells',
+  '12' = 'Macrophages',
+  '13' = 'Pericytes',
+  '14' = 'Inhibitory_neurons',
+  '15' = 'Inhibitory_neurons',
+  '16' = 'Choroid_plexus_epithelial_cells',
+  '17' = 'Vascular_leptomeningeal_cells',
+  '18' = 'Astrocytes_3',
+  '19' = 'Inhibitory_neurons',
+  '20' = 'Astrocytes_4',
+  '21' = 'Neurons_Excitatory',
+  '22' = 'Neurons_Excitatory',
+  '23' = 'Arachnoid_bareer_cells',
+  '24' = 'Ependymal_cells',
+  '25' = 'Inhibitory_neurons'
+)
+
+seurat.wnn                 <- RenameIdents(seurat.wnn,idents_L2)
+seurat.wnn$idents_L2    <- seurat.wnn@active.ident
+seurat.wnn                 <- SetIdent(seurat.wnn,cells = names(seurat.wnn$seurat_clusters), value = seurat.wnn$seurat_clusters)
+
+p1 <- DimPlot(seurat.wnn,label=TRUE,group.by = 'idents_L2') + NoLegend()
+p2 <- DimPlot(seurat.wnn,label=TRUE, group.by = 'seurat_clusters') + NoLegend()
+
+p1+p2
+
+```
+
+
+
+```{r rename_WNN_L3, fig.width=8,fig.height=4}
+
+idents_L3 <- c(
+  '0' = 'Astrocytes_non-telencephalon',
+  '1' = 'Astrocytes_telencephalon',
+  '2' = 'Neurons_Excitatory_1',
+  '3' = 'Vascular_endothelial_cells_1',
+  '4' = 'Mature_oligodendrocytes',
+  '5' = 'Microglia',
+  '6' = 'Vascular_endothelial_cells_2',
+  '7' = 'Bergman_glia',
+  '8' = 'Inhibitory_neurons_1',
+  '9' = 'Oligodendrocyte_progenitor_cells',
+  '10' = 'Radial_glial_cells',
+  '11' = 'Olfactory_ensheating_cells',
+  '12' = 'Macrophages',
+  '13' = 'Pericytes',
+  '14' = 'Inhibitory_neurons_2',
+  '15' = 'Inhibitory_neurons_3',
+  '16' = 'Choroid_plexus_epithelial_cells',
+  '17' = 'Vascular_leptomeningeal_cells',
+  '18' = 'Astrocytes_3',
+  '19' = 'Inhibitory_neurons_4',
+  '20' = 'Astrocytes_4',
+  '21' = 'Neurons_Excitatory_2',
+  '22' = 'Neurons_Excitatory_3',
+  '23' = 'Arachnoid_bareer_cells',
+  '24' = 'Ependymal_cells',
+  '25' = 'Inhibitory_neurons_5'
+)
+
+seurat.wnn                 <- RenameIdents(seurat.wnn,idents_L3)
+seurat.wnn$idents_L3    <- seurat.wnn@active.ident
+seurat.wnn                 <- SetIdent(seurat.wnn,cells = names(seurat.wnn$seurat_clusters), value = seurat.wnn$seurat_clusters)
+
+p1 <- DimPlot(seurat.wnn,label=TRUE,group.by = 'idents_L3') + NoLegend()
+p2 <- DimPlot(seurat.wnn,label=TRUE, group.by = 'seurat_clusters') + NoLegend()
+
+p1+p2
+
+```
+
+
+
+```{r rename_WNN_short, fig.width=8,fig.height=4}
+
+idents_short <- c(
+  '0' = 'AST_NT',
+  '1' = 'AST_TE',
+  '2' = 'EXC1',
+  '3' = 'VEC1',
+  '4' = 'MOL',
+  '5' = 'MGL',
+  '6' = 'VEC2',
+  '7' = 'BG',
+  '8' = 'INH1',
+  '9' = 'OPC',
+  '10' = 'RGC',
+  '11' = 'OEC',
+  '12' = 'MAC',
+  '13' = 'PER',
+  '14' = 'INH2',
+  '15' = 'INH3',
+  '16' = 'CHP',
+  '17' = 'VLMC',
+  '18' = 'AST3',
+  '19' = 'INH4',
+  '20' = 'AST4',
+  '21' = 'EXC2',
+  '22' = 'EXC3',
+  '23' = 'ABC',
+  '24' = 'EPE',
+  '25' = 'INH5'
+)
+
+seurat.wnn                 <- RenameIdents(seurat.wnn,idents_short)
+seurat.wnn$idents_short    <- seurat.wnn@active.ident
+seurat.wnn                 <- SetIdent(seurat.wnn,cells = names(seurat.wnn$seurat_clusters), value = seurat.wnn$seurat_clusters)
+
+p1 <- DimPlot(seurat.wnn,label=TRUE,group.by = 'idents_short') + NoLegend()
+p2 <- DimPlot(seurat.wnn,label=TRUE, group.by = 'seurat_clusters') + NoLegend()
+
+p1+p2
+
 ```
 
 
 
 
 
-```{r, fig.width=8,fig.height=4}
+
+
+
+
+
+
+```{r export}
+saveRDS(object = seurat.wnn,file = params$output)
+
+```
+
+
+
+```{r noWNN_just_merge}
+seurat.noWNN <- readRDS(file=params$seurat)
+
+DefaultAssay(seurat.noWNN[['merged']]) <- 'peaks'
+seurat.noWNN[['merged']] <- seurat.noWNN[['merged']] %>% RunTFIDF() %>% FindTopFeatures() %>% RunSVD() 
+
+seurat.noWNN[['merged']] <- RunUMAP(object = seurat.noWNN[['merged']], dims=2:50,reduction = 'lsi')
+seurat.noWNN[['merged']] <- FindNeighbors(seurat.noWNN[['merged']],reduction = 'lsi',dims = 2:50) %>% FindClusters()
+
+
+
 for(x in modalities){
-  seurat[['merged']] <- AddMetaData(seurat[['merged']],metadata = seurat[[x]]$idents_L3,col.name = paste0(x,'_idents_L3'))
+  seurat.noWNN[['merged']] <- AddMetaData(seurat.noWNN[['merged']],metadata = seurat.noWNN[[x]]$idents_L3,col.name = paste0(x,'_idents_short'))
 }
+
+DimPlot(seurat.noWNN[['merged']],label=TRUE) + NoLegend()
 lapply(modalities,function(x){
-  DimPlot(seurat[['merged']],group.by=paste0(x,'_idents_L3'),label=TRUE,repel=TRUE) + NoLegend()
+  DimPlot(seurat.noWNN[['merged']],group.by=paste0(x,'_idents_short'),label=TRUE,repel=TRUE) + NoLegend()
 })
 
 ```

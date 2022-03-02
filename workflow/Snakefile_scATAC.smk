@@ -16,7 +16,8 @@ rule scATAC_all:
     input:
         'results/scATAC_bingren/seurat/Seurat_ATAC_clustered.Rds',
         'results/scATAC_bingren/seurat/Seurat_ATAC_fragments.bed.gz',
-        expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/integration/integrated_with_ATAC_{nfeatures}.Rds', modality = ['ATAC','H3K27ac'], feature = 'peaks', nfeatures = [1000,5000,10000,20000,40000,50000,75000,100000,125000,150000,200000]),
+        # expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/integration/integrated_with_ATAC_{nfeatures}.Rds', modality = ['ATAC','H3K27ac'], feature = 'peaks', nfeatures = [1000,5000,10000,20000,40000,50000,75000,100000,125000]),
+
 
 ############################# Bing ren mouse brain
 # Li, Y.E., Preissl, S., Hou, X. et al. An atlas of gene regulatory elements in adult mouse cerebrum. Nature 598, 129–136 (2021). https://doi.org/10.1038/s41586-021-03604-1

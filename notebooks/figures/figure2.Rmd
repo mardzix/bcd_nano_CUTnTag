@@ -375,7 +375,91 @@ p1
 
 ggsave(plot = p1, filename = paste0(params$out_prefix,'/figures/figure_2/FRIP_multimodal_vs_scCUTnTag.pdf'),width=8,height=4)
 ```
+```{r H3K27ac_markers_currated, fig.width=15,fig.height=15}
+library(dplyr)
+library(gridExtra)
+library(Seurat)
+library(Signac)
+library(ggplot2)
+
+seurat.ls  <- readRDS(file=paste0(params$out_prefix,'/multiple_modalities/ATAC_H3K27ac_H3K27me3/seurat_multimodal/peaks/Seurat_object.Rds'))
+
+markers.ls <- lapply(names(seurat.ls[1:3]),function(x){
+  markers <- read.csv(file = paste0(params$out_prefix,'/multimodal_data/single_modality/',x,'/seurat/peaks/markers/idents_L3/markers.csv'))
+  markers.top <- markers %>% group_by(cluster) %>% top_n(n = 20,wt = avg_log2FC) %>% dplyr::select(gene,closest_gene)
+  return(markers.top)
+})
+
+names(markers.ls) <- names(seurat.ls[1:3])
+
+markers <- c(
+  'chr2-38346331-38368102', # AST_TE    Lhx2
+  'chr6-114143211-114167487', # AST_NTE Slc6a11
+  'chr16-95432175-95466802', # VEC Erg
+  'chr7-30904426-30922848', # OLG Mag
+  'chr4-136884496-136899230', # MGL C1qb
+  'chr2-79442492-79463028', # EXC1 Neurod1
+  'chr11-118880858-118916602', # Neu Rbfox3
+  'chr2-70556029-70574251', # Inh Gad1
+  'chr6-6844658-6885776', # Inh Dlx6
+  'chr1-78163533-78207167', # Bergman, Astro_3 Pax3
+  'chr13-31797281-31832324', # Pericytes Foxc1
+  'chr9-75070193-75112142',  # Macrophages Myo5a
+  'chr9-87728925-87740896', # VLMC Tbx18
+  'chr6-17064579-17093785', # OEC Tes
+  'chr11-64484439-64501576', # Astro_4 Hs3st3a1
+  'chr6-116714660-116725147', # CHP Tmem72
+  'chr11-85818228-85853070', # VSMC Bcas3
+  'chr16-43958390-43983071' # EPE
+)
 
 
+p.ls <- FeaturePlot(seurat.ls[[2]],markers,combine = FALSE,max.cutoff = 3,col=c('grey99','blue'))
+p.ls <- lapply(1:length(p.ls), function(x){
+  closest_gene <- markers.ls[[2]][match(markers[x],markers.ls[[2]]$gene),'closest_gene']
+  p.ls[[x]] + ggtitle(paste0(closest_gene,'   ', markers[x]))
+  })
+
+png(filename = paste0(params$out_prefix,'/figures/figure_2/H3K27ac_markers_UMAP.png'),width=20,height=20,units='in',res=300)
+do.call('grid.arrange',p.ls)
+dev.off()
+
+
+
+png(filename = paste0(params$out_prefix,'/figures/figure_2/H3K27ac_markers_Vln.png'),width=20,height=20,units='in',res = 300)
+VlnPlot(seurat.ls[[2]],features = markers,group.by = 'idents_short',) + NoLegend()
+dev.off()
+```
+
+
+
+```{r non_currated_markers, fig.width=15,fig.height=15}
+markers.ls <- lapply(names(seurat.ls[1:3]),function(x){
+  markers <- read.csv(file = paste0(params$out_prefix,'/multimodal_data/single_modality/',x,'/seurat/peaks/markers/idents_L3/markers.csv'))
+  markers.top <- markers %>% group_by(cluster) %>% top_n(n = 1,wt = -log(p_val_adj))
+  return(markers.top)
+})
+
+# ATAC
+
+p.ls <- lapply(as.list(as.data.frame(t(markers.ls[[1]]))), function(m){
+  FeaturePlot(seurat.ls[[1]],features = m[8], cols=c('grey99','red')) + NoLegend() + ggtitle(paste0(m[9],'  ',m[8]))
+})
+do.call('grid.arrange', p.ls)
+
+# H3K27ac
+
+p.ls <- lapply(as.list(as.data.frame(t(markers.ls[[2]]))), function(m){
+  FeaturePlot(seurat.ls[[2]],features = m[8], cols=c('grey99','red')) + NoLegend() + ggtitle(paste0(m[9],'  ',m[8]))
+})
+do.call('grid.arrange', p.ls)
+
+# H3K27me3
+
+p.ls <- lapply(as.list(as.data.frame(t(markers.ls[[3]]))), function(m){
+  FeaturePlot(seurat.ls[[3]],features = m[8], cols=c('grey99','red')) + NoLegend() + ggtitle(paste0(m[9],'  ',m[8]))
+})
+do.call('grid.arrange', p.ls)
+```
 
 

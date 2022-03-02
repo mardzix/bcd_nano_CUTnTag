@@ -1,3 +1,5 @@
+include: "Snakefile_single_modality.smk"
+
 configfile: workflow.basedir + '/../config/config.yaml'
 
 samples_list_nbiotech = [x for x in config['nbiotech_data']['samples'].keys()]
@@ -17,11 +19,12 @@ localrules: nbiotech_fastq_dump
 
 rule nbiotech_all:
     input:
-        expand('results/nbiotech_data/cellranger/{sample}/outs/possorted_bam.bam', sample= samples_list),
-        expand('results/nbiotech_data/{sample}/seurat/bin_{binwidth}/Seurat_object.Rds', sample = samples_list,binwidth=5000),
+        expand('results/nbiotech_data/cellranger/{sample}/outs/possorted_bam.bam', sample= samples_list_nbiotech),
+        expand('results/nbiotech_data/{sample}/seurat/bin_{binwidth}/Seurat_object.Rds', sample = samples_list_nbiotech,binwidth=5000),
 
         # Seurat direct download
-        'results/nbiotech_data/data/seurat/H3K27me3_seurat_object.Rds'
+        'results/nbiotech_data/data/seurat/H3K27me3_seurat_object.Rds',
+        'results/nbiotech_data/data/bigwig/H3K27ac_Astrocytes.bw'
 
 rule nbiotech_fastq_dump:
     output:
@@ -231,7 +234,56 @@ rule untar_seurat:
     output:
         H3K27me3 = 'results/nbiotech_data/data/seurat/H3K27me3_seurat_object.Rds'
     params:
-        outdir   = 'results/nbiotech_data/data/seurat/'
+        dirname  = 'results/nbiotech_data/data/seurat/'
     shell:
-        'tar -xvzf {input.archive}; '
+        'cd {params.dirname}; '
+        'tar -xvzf `basename {input.archive}`'
 
+rule download_bigwigs:
+    output:
+        bw_tar = 'results/nbiotech_data/data/bigwig/nbiotech_bigwig.tar.gz'
+    params:
+        url = config['nbiotech_data']['url']['bigwig']
+    shell:
+        'wget -O {output.bw_tar} {params.url}'
+
+rule untar_bigwig:
+    input:
+        bw_tar = 'results/nbiotech_data/data/bigwig/nbiotech_bigwig.tar.gz'
+    output:
+        'results/nbiotech_data/data/bigwig/H3K27ac_Astrocytes.bw',
+        'results/nbiotech_data/data/bigwig/H3K27ac_OEC.bw',
+        'results/nbiotech_data/data/bigwig/H3K27ac_OPC.bw',
+        'results/nbiotech_data/data/bigwig/H3K27ac_VLMC.bw',
+        'results/nbiotech_data/data/bigwig/H3K27ac_mOL.bw',
+        'results/nbiotech_data/data/bigwig/H3K27me3_Astrocytes.bw',
+        'results/nbiotech_data/data/bigwig/H3K27me3_Microglia.bw',
+        'results/nbiotech_data/data/bigwig/H3K27me3_Neurons_1.bw',
+        'results/nbiotech_data/data/bigwig/H3K27me3_Neurons_3.bw',
+        'results/nbiotech_data/data/bigwig/H3K27me3_OEC.bw',
+        'results/nbiotech_data/data/bigwig/H3K27me3_OPC.bw',
+        'results/nbiotech_data/data/bigwig/H3K27me3_VLMC.bw',
+        'results/nbiotech_data/data/bigwig/H3K27me3_mOL.bw',
+        'results/nbiotech_data/data/bigwig/H3K36me3_Astrocytes.bw',
+        'results/nbiotech_data/data/bigwig/H3K36me3_OEC.bw',
+        'results/nbiotech_data/data/bigwig/H3K36me3_OPC.bw',
+        'results/nbiotech_data/data/bigwig/H3K36me3_mOL.bw',
+        'results/nbiotech_data/data/bigwig/H3K4me3_Astrocytes.bw',
+        'results/nbiotech_data/data/bigwig/H3K4me3_Microglia.bw',
+        'results/nbiotech_data/data/bigwig/H3K4me3_Neurons_1.bw',
+        'results/nbiotech_data/data/bigwig/H3K4me3_Neurons_2.bw',
+        'results/nbiotech_data/data/bigwig/H3K4me3_Neurons_3.bw',
+        'results/nbiotech_data/data/bigwig/H3K4me3_OEC.bw',
+        'results/nbiotech_data/data/bigwig/H3K4me3_OPC.bw',
+        'results/nbiotech_data/data/bigwig/H3K4me3_VLMC.bw',
+        'results/nbiotech_data/data/bigwig/H3K4me3_mOL.bw',
+        'results/nbiotech_data/data/bigwig/Olig2_non_oligo.bw',
+        'results/nbiotech_data/data/bigwig/Olig2_oligo.bw',
+        'results/nbiotech_data/data/bigwig/Rad21_Astrocytes.bw',
+        'results/nbiotech_data/data/bigwig/Rad21_OEC.bw',
+        'results/nbiotech_data/data/bigwig/Rad21_mOL.bw',
+    params:
+        dirname = 'results/nbiotech_data/data/bigwig/',
+    shell:
+        'cd {params.dirname}; '
+        'tar -xvzf `basename {input.bw_tar}`'
