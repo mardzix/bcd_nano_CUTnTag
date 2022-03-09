@@ -90,14 +90,16 @@ rule create_meta_matrix:
     input:
         peaks     = 'results/benchmarks/{feature}/specificity_benchmark/peaks_specific/',
         bw_K27ac  = 'results/multimodal_data/single_modality/H3K27ac/seurat/{feature}/bam_per_cluster/idents_short/bigwig/',
-        bw_K27me3 = 'results/multimodal_data/single_modality/H3K27me3/seurat/{feature}/bam_per_cluster/idents_short/bigwig/'
+        bw_K27me3 = 'results/multimodal_data/single_modality/H3K27me3/seurat/{feature}/bam_per_cluster/idents_short/bigwig/',
+        nbiot_K27ac= 'results/nbiotech_data/data/bigwig/H3K27ac_Astrocytes.bw',
+        nbiot_K27me3='results/nbiotech_data/data/bigwig/H3K27me3_Astrocytes.bw',
     output:
         'results/benchmarks/{feature}/specificity_benchmark/metaplot.mtx',
     params:
-        pattern = 'AST_[TN][ET].bw'
+        pattern = 'AST_TE.bw'
     threads: 8
     shell:
-        'computeMatrix reference-point -S {input.bw_K27ac}/{params.pattern} {input.bw_K27me3}/{params.pattern} '
+        'computeMatrix reference-point -S {input.bw_K27ac}/{params.pattern} {input.bw_K27me3}/{params.pattern} {input.nbiot_K27ac} {input.nbiot_K27me3}'
         ' -R {input.peaks}/*.bed -o {output} -p {threads} --referencePoint center '
         '--upstream 20000 --downstream 20000'
 
@@ -107,4 +109,6 @@ rule plot_heatmap:
     output:
         'results/benchmarks/{feature}/specificity_benchmark/metaplot.pdf',
     shell:
-       'plotHeatmap -m {input} -o {output}'
+       'plotHeatmap -m {input} -o {output} --colorMap Purples Greens Purples Greens --zMax 5.5 6.5 3.5 4.5'
+
+

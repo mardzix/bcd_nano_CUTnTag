@@ -1,0 +1,171 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(clusterProfiler)
+library(org.Mm.eg.db)
+library(Seurat)
+```
+
+```{r,fig.width=5,fig.height=8}
+seurat <- readRDS(file='/data/proj/GCB_MB/bcd_CT/single-cell/results/multiple_modalities/ATAC_H3K27ac_H3K27me3/seurat_multimodal/peaks/scvelo/ATAC_H3K27ac/Seurat_object_OPC_MOL.h5Seurat.Rds')
+
+all.genes <- rownames(seurat[['SCT']]@scale.data)
+# all.genes <- rownames(seurat)
+
+gene_list <- read.csv(file='/data/proj/GCB_MB/bcd_CT/single-cell/results/multiple_modalities/ATAC_H3K27ac_H3K27me3/seurat_multimodal/peaks/scvelo/ATAC_H3K27ac/top_genes.csv',header = FALSE,stringsAsFactors = F)[1,]
+
+gene_list <- as.character(gene_list)
+
+ego1 <- enrichGO(gene          = gene_list,
+                 universe      = all.genes,
+                 OrgDb         = org.Mm.eg.db,
+                 keyType       = 'SYMBOL',
+                 ont           = "BP",
+                 pAdjustMethod = "BH",
+                 pvalueCutoff  = 0.05,
+                 qvalueCutoff  = 0.05,
+                 readable      = FALSE)
+clusterProfiler::dotplot(ego1)
+View(ego1@result)
+
+```
+
+```{r, fig.width=6,fig.height=10}
+gene_list <- read.csv(file='/data/proj/GCB_MB/bcd_CT/single-cell/results/multiple_modalities/ATAC_H3K27ac_H3K27me3/seurat_multimodal/peaks/scvelo/ATAC_H3K27ac/top_genes_per_cluster.csv',stringsAsFactors = F,row.names = 1)
+
+ego1 <- enrichGO(gene          = gene_list$OPC,
+                 universe      = all.genes,
+                 OrgDb         = org.Mm.eg.db,
+                 keyType       = 'SYMBOL',
+                 ont           = "BP",
+                 pAdjustMethod = "BH",
+                 pvalueCutoff  = 0.05,
+                 qvalueCutoff  = 0.05,
+                 readable      = FALSE)
+
+
+ego2 <- enrichGO(gene          = gene_list$MOL,
+                 universe      = all.genes,
+                 OrgDb         = org.Mm.eg.db,
+                 keyType       = 'SYMBOL',
+                 ont           = "BP",
+                 pAdjustMethod = "BH",
+                 pvalueCutoff  = 0.05,
+                 qvalueCutoff  = 0.05,
+                 readable      = FALSE)
+clusterProfiler::dotplot(ego1)
+clusterProfiler::dotplot(ego2)
+View(ego1@result)
+View(ego2@result)
+
+```
+
+
+```{r}
+library(ggplot2)
+library(reshape2)
+library(dplyr)
+
+scRNA <- readRDS(file='/data/proj/GCB_MB/single-cell-CUT-Tag/nbiotech_paper/analysis/results/Sten_RNA/clustering/01.clustering_20000cells.Rds')
+scRNA <- readRDS(file='/data/proj/GCB_MB/single-cell-CUT-Tag/nbiotech_paper/analysis/results/marques_RNA/clustering/01.clustering.Rds')
+
+
+gene_list <- read.csv(file='/data/proj/GCB_MB/bcd_CT/single-cell/results/multiple_modalities/ATAC_H3K27ac_H3K27me3/seurat_multimodal/peaks/scvelo/ATAC_H3K27ac/top_genes.csv',stringsAsFactors = F,row.names = NULL,header = FALSE)
+
+gene_list <- as.character(gene_list)
+
+markers.scRNA <- read.csv2(file = '/data/proj/GCB_MB/single-cell-CUT-Tag/nbiotech_paper/analysis/results/marques_RNA/clustering/markers.csv')
+markers.top   <- markers.scRNA %>% group_by(cluster) %>% top_n(wt = avg_logFC,n=20)
+markers.top.genes <- markers.top$gene
+
+m <- GetAssayData(scRNA,slot = 'data',assay = 'RNA')
+
+n=100
+scRNA.index  <- sort(head(na.omit(match(markers.scRNA$gene,rownames(m))),n))
+scVelo.index <- sort(head(na.omit(match(gene_list,rownames(m))),n))
+
+scRNA.matrix  <-  m[scRNA.index,]
+scVelo.matrix <-  m[scVelo.index,]
+
+a <- apply(scRNA.matrix,2,max)
+b <- apply(scVelo.matrix,2,max)
+
+df<- data.frame('scRNA'=a,
+                'scVelo'=b)
+
+df.long <- reshape2::melt(df)
+ggplot(data=df.long, aes(x=variable,y=value,fill=variable)) + 
+  geom_violin() + 
+  theme_minimal() + 
+  theme(panel.grid = element_blank())
+ggsave('/data/proj/GCB_MB/bcd_CT/single-cell/results/figures/figure_6/violin_expression_scRNA_vs_velo_genes.pdf',width = 6,height = 6)
+######################################################################
+```
+
+```{r run_pseudotim_Marques}
+library(slingshot)
+scRNA <- readRDS(file='/data/proj/GCB_MB/single-cell-CUT-Tag/nbiotech_paper/analysis/results/marques_RNA/clustering/01.clustering.Rds')
+
+scRNA <- scRNA[,scRNA$cell_type != 'PPR']
+
+sshot <- slingshot(data = Embeddings(scRNA,reduction = 'pca'),
+                   clusterLabels = scRNA$cell_type)
+
+
+pt <- slingPseudotime(sshot)
+pt1 <- setNames(as.numeric(pt[,1]), rownames(pt))
+
+scRNA  <- AddMetaData(scRNA,metadata = pt1 ,col.name='pt')
+FeaturePlot(scRNA,'pt') + scale_color_viridis_c()
+```
+
+```{r}
+library(pheatmap)
+library(RColorBrewer)
+
+gene_list <- read.csv(file='/data/proj/GCB_MB/bcd_CT/single-cell/results/multiple_modalities/ATAC_H3K27ac_H3K27me3/seurat_multimodal/peaks/scvelo/ATAC_H3K27ac/top_genes.csv',stringsAsFactors = F,row.names = NULL,header = FALSE)
+
+gene_list <- as.character(gene_list)
+
+m <- GetAssayData(scRNA,slot = 'data',assay = 'RNA')
+
+
+
+scVelo.index <- sort(head(na.omit(match(gene_list,rownames(m))),n=300))
+scVelo.matrix <-  m[scVelo.index,]
+
+ann_col <- data.frame(row.names    = names(scRNA$cell_type),
+                      'cluster'    = scRNA$cell_type,
+                      'pseudotime' = scRNA$pt[names(scRNA$cell_type)])
+
+ann_col$cluster <- factor(ann_col$cluster,
+                          levels= c('OPC','COP',
+                                    'NFOL1','NFOL2',
+                                    'MFOL1','MFOL2',
+                                    'MOL1','MOL2','MOL3','MOL4','MOL5','MOL6'))
+
+
+cluster_colors <- c(brewer.pal(name = 'Reds',n = 3)[1:2],
+                    brewer.pal(name = 'Blues',n = 3)[1:2],
+                    brewer.pal(name = 'Oranges',n = 3)[1:2],
+                    brewer.pal(name = 'Greens',n = 6))
+
+cluster_colors <- list('cluster'=cluster_colors)
+names(cluster_colors[['cluster']]) <- levels(ann_col$cluster)
+
+
+png('/data/proj/GCB_MB/bcd_CT/single-cell/results/figures/figure_6/scRNA_Expression_heatmap_scVelo_genes.png', width=1000,height=1000)
+pheatmap(scVelo.matrix[,names(sort(scRNA$pt))],
+         cluster_cols = FALSE,
+         treeheight_row = 0,show_colnames = FALSE,annotation_col = ann_col,
+         annotation_colors = cluster_colors)
+dev.off()
+```
+
+
+
+
+

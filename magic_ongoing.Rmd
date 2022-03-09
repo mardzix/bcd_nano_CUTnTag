@@ -1,0 +1,145 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(Rmagic)
+library(Seurat)
+library(Signac)
+set.seed(1234)
+```
+
+```{r}
+seurat.ls <- readRDS(file='/data/proj/GCB_MB/bcd_CT/single-cell/results/multiple_modalities/ATAC_H3K27ac_H3K27me3/seurat_multimodal/peaks/Seurat_object.Rds')
+seurat.magic.ls <- lapply(seurat.ls,magic)
+```
+
+```{r eval=FALSE}
+# imputed <- magic(seurat.ls[[1]],genes = 'chr9-69754058-69772974')
+# FeaturePlot(imputed,'chr9-69754058-69772974') 
+# 
+# seurat.magic.ls <- lapply(seurat.ls,magic)
+# lapply(seurat.magic.ls,function(x){DefaultAssay(x) <- 'MAGIC_peaks'})
+# 
+# FeaturePlot(seurat.magic.ls[[1]],'chr9-69754058-69772974') 
+
+peaks.common <- rtracklayer::import(con = '/data/proj/GCB_MB/bcd_CT/single-cell/results/benchmarks/peaks/specificity_benchmark/peaks_merged.bed')
+
+##############
+peaks.ls <- lapply(seurat.ls[1:3],function(x){StringToGRanges(rownames(x))})
+peaks.merged <- purrr::reduce(peaks.ls,c)
+peaks.merged <- GenomicRanges::reduce(peaks.merged)
+##############
+
+
+matrix.new.ls <- lapply(seurat.ls[1:3],function(x){
+  FeatureMatrix(fragments = Fragments(x),features = peaks.merged,cells = Cells(x))
+})
+
+seurat.common.ls <- lapply(names(seurat.ls)[1:3], function(x){
+  CreateSeuratObject(counts = matrix.new.ls[[x]],assay = x)
+})
+
+
+seurat.common.magic.ls <- lapply(seurat.common.ls, magic)
+saveRDS(object = seurat.common.ls,file = '/data/proj/GCB_MB/bcd_CT/single-cell/results/seurat_magic_tempRds')
+```
+
+
+```{r}
+seurat.common.magic.ls <- readRDS(file = '/data/proj/GCB_MB/bcd_CT/single-cell/results/seurat_magic_temp.Rds')
+names(seurat.common.magic.ls) <- names(seurat.ls)[1:3]
+
+seurat.common.magic.ls <- lapply(names(seurat.common.magic.ls),function(x){
+  seurat.common.magic.ls[[x]]@reductions[['umap']] <-seurat.ls[[x]]@reductions[['umap']]
+  seurat.common.magic.ls[[x]] <- AddMetaData(seurat.common.magic.ls[[x]], metadata = seurat.ls[[x]]@meta.data)
+  seurat.common.magic.ls[[x]]
+})
+
+df <- cbind(
+GetAssayData(object = seurat.common.magic.ls[[1]],assay = 'MAGIC_ATAC')[,1],
+GetAssayData(object = seurat.common.magic.ls[[2]],assay = 'MAGIC_H3K27ac')[,1],
+GetAssayData(object = seurat.common.magic.ls[[3]],assay = 'MAGIC_H3K27me3')[,1])
+
+
+df <- as.data.frame(df)
+library(ggplot2)
+ggplot(data=df, aes(x=V1,y=V2)) + geom_point(size=0.1) + geom_density2d() + xlab('ATAC') + ylab('H3K27ac') + coord_cartesian(xlim=c(0,0.8))
+ggplot(data=df, aes(x=V2,y=V3)) + geom_point(size=0.1) + geom_density2d() + coord_cartesian(ylim=c(0,1)) # + scale_x_log10() + scale_y_log10()
+
+
+```
+
+
+```{r}
+library(Seurat)
+library(Signac)
+library(SeuratWrappers)
+library(SeuratDisk)
+
+seurat.ls <- readRDS(file='/data/proj/GCB_MB/bcd_CT/single-cell/results/multiple_modalities/ATAC_H3K27ac_H3K27me3/seurat_multimodal/peaks/Seurat_object.Rds')
+
+common.cells <- lapply(seurat.ls[1:3],function(x){
+  Cells(x[,x$idents_short %in% c('OPC','MOL')])
+})
+common.cells <- purrr::reduce(common.cells,intersect)
+
+
+bm <- CreateSeuratObject(seurat.ls[['ATAC']][['GA']][,common.cells],meta.data = seurat.ls[["H3K27ac"]]@meta.data,assay='unspliced')
+bm[['spliced']] <- CreateAssayObject(seurat.ls[['H3K27ac']][['GA']]@counts[,common.cells],)
+
+
+# bm <- bm[common.genes,]
+
+
+bm <- SCTransform(object = bm, assay = "spliced")
+bm <- RunPCA(object = bm, verbose = FALSE)
+
+bm <- FindNeighbors(object = bm, dims = 1:20)
+bm <- FindClusters(object = bm)
+bm <- RunUMAP(object = bm, dims = 1:10)
+DimPlot(bm,label=TRUE,group.by='idents_short') + NoLegend()
+
+common.genes <- lapply(bm@assays, rownames)
+common.genes <- purrr::reduce(common.genes,intersect)
+common.genes <- intersect(common.genes, rownames(GetAssayData(bm,slot = 'scale.data',assay='SCT')))
+bm <- bm[common.genes,]
+
+# bm@reductions[['umap']] <- seurat.ls[[2]]@reductions[['umap']]
+
+SaveH5Seurat(bm, filename = "/data/proj/GCB_MB/bcd_CT/single-cell/results/seurat_scvelo.h5Seurat",overwrite=T)
+Convert("/data/proj/GCB_MB/bcd_CT/single-cell/results/seurat_scvelo.h5Seurat", dest = "h5ad",overwrite=T)
+
+
+```
+
+
+```{r}
+
+bm <- RunVelocity(object = bm, deltaT = 1, kCells = 25, fit.quantile = 0.02)
+ident.colors <- (scales::hue_pal())(n = length(x = levels(x = bm)))
+names(x = ident.colors) <- levels(x = bm)
+cell.colors <- ident.colors[Idents(object = bm)]
+names(x = cell.colors) <- colnames(x = bm)
+
+png(filename = '/data/proj/GCB_MB/bcd_CT/single-cell/results/velocyto_temp.png',width=10,height=10,units='in',res=300)
+show.velocity.on.embedding.cor(emb = Embeddings(object = bm, reduction = "umap"), vel = Tool(object = bm, 
+    slot = "RunVelocity"), n = 200, scale = "sqrt", cell.colors = ac(x = cell.colors, alpha = 0.5), 
+    cex = 0.8, arrow.scale = 3, show.grid.flow = TRUE, min.grid.cell.mass = 0.5, grid.n = 40, arrow.lwd = 1, 
+    do.par = FALSE, cell.border.alpha = 0.1)
+dev.off()
+
+```
+
+
+```{r seurat_to_scvelo}
+
+seurat.ls
+
+
+
+
+
+```
+

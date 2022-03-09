@@ -128,9 +128,9 @@ features.ls = list("ATAC" = "chr12-49372226-49402169","H3K27ac" = "chr12-4937193
 FeaturePlotPaired <- function(seurat.ls,features.ls, max.cutoff =2){
   emb.ls <- lapply(names(seurat.ls),function(x){
     seurat.x   <- seurat.ls[[x]]
-    embeddings <- seurat.x@reductions[['umap']]@cell.embeddings
-    if(x=='H3K27ac')  {embeddings[,1] <- embeddings[,1] + 40}
-    if(x=='H3K27me3') {embeddings[,1] <- embeddings[,1] + 80; embeddings[,2] <- -embeddings[,2]}
+    embeddings <- scale(seurat.x@reductions[['umap']]@cell.embeddings)
+    if(x=='H3K27ac')  {embeddings[,1] <- embeddings[,1] + 10}
+    if(x=='H3K27me3') {embeddings[,1] <- embeddings[,1] + 20; embeddings[,2] <- -embeddings[,2]}
     score      <- GetAssayData(object = seurat.x)[features.ls[[x]],]
     to.plot    <- as.data.frame(cbind(embeddings,score))
     to.plot$modality <- x
@@ -143,29 +143,207 @@ FeaturePlotPaired <- function(seurat.ls,features.ls, max.cutoff =2){
 }
 
 
-data.ls <- FeaturePlotPaired(seurat.ls.small, features.ls)
+data.ls <- FeaturePlotPaired(seurat.ls.small, features.ls,max.cutoff = 10)
 data.df <- purrr::reduce(data.ls,rbind)
 
 connections <- sample(data.ls[[1]]$cell_barcode,500)
 
-ggplot(data.df,aes(x=UMAP_1,y=UMAP_2)) + 
-  geom_point(aes(col=cluster),size=0.1) + 
-  geom_line(aes(group=cell_barcode,col=cluster),alpha=0.01) + 
-  theme(panel.grid = element_blank()) #+ scale_color_viridis_c()
+# ggplot(data.df,aes(x=UMAP_1,y=UMAP_2)) +
+#   geom_point(aes(col=cluster),size=0.1) +
+#   geom_line(aes(group=cell_barcode,col=cluster),alpha=0.01) +
+#   theme(panel.grid = element_blank()) #+ scale_color_viridis_c()
 
+theme_set(theme_minimal())
+col_pal <- c(viridis_pal(option = 'B')(20))
 
-col_pal <- c(rep('grey',10),viridis_pal()(20))
-
-ggplot(data.df,aes(x=UMAP_1,y=UMAP_2)) + 
-  geom_point(aes(col=score),size=0.05) + 
-  geom_line(aes(group=cell_barcode),alpha=0.01) + 
-  theme(panel.grid = element_blank()) + scale_color_viridis(option = 'A')
-
+ggplot(data.df,aes(x=UMAP_1,y=UMAP_2)) +
+  geom_point(aes(col=score),size=0.4) +
+  geom_line(aes(group=cell_barcode),alpha=0.04,size=0.2) +
+  theme(panel.grid = element_blank()) + scale_color_gradientn(colours = col_pal,limits=c(1,3)) + coord_cartesian(ylim=c(-3,3))
+ggsave(paste0(params$out_prefix,'/figures/figure_4/Foxg1_UMAP_connected.pdf'),width=8,height = 8 )
 ```
 
 
 
 
+```{r Lhx2, fig.width=8,fig.height=8}
+seurat.ls <- readRDS(file='/data/proj/GCB_MB/bcd_CT/single-cell/results/multiple_modalities/ATAC_H3K27ac_H3K27me3/seurat_multimodal/peaks/Seurat_object.Rds')
+# markers <- read.csv(file='/data/proj/GCB_MB/bcd_CT/single-cell/results/multimodal_data/single_modality/H3K27ac/seurat/peaks/markers/idents_short/markers.csv')
+
+
+# DimPlot(seurat.ls[[3]],group.by='idents_short',label=T) + NoLegend()
+
+seurat.ls.small <- lapply(seurat.ls[1:3],function(x){
+  x <- x[,x$idents_short %in% c("AST_TE","AST_NT")]
+  x
+})
+
+
+# markers.ls <- lapply(seurat.ls.small,FindAllMarkers)
+
+
+features.ls = list("ATAC"    = "chr2-38346609-38360393",
+                   "H3K27ac" = "chr2-38346331-38368102",
+                   "H3K27me3"="chr2-38332755-38368139")
+
+FeaturePlotPaired <- function(seurat.ls,features.ls, max.cutoff =2){
+  emb.ls <- lapply(names(seurat.ls),function(x){
+    seurat.x   <- seurat.ls[[x]]
+    embeddings <- scale(seurat.x@reductions[['umap']]@cell.embeddings)
+    if(x=='H3K27ac')  {embeddings[,1] <- embeddings[,1] + 10}
+    if(x=='H3K27me3') {embeddings[,1] <- embeddings[,1] + 20; embeddings[,2] <- -embeddings[,2]}
+    score      <- GetAssayData(object = seurat.x)[features.ls[[x]],]
+    to.plot    <- as.data.frame(cbind(embeddings,score))
+    to.plot$modality <- x
+    to.plot$cluster  <-seurat.ls[[x]]$idents_short[rownames(to.plot)] 
+    to.plot$cell_barcode <- rownames(to.plot)
+    to.plot$score[to.plot$score > max.cutoff] <- max.cutoff
+    return(to.plot)
+  })
+  
+}
+
+
+data.ls <- FeaturePlotPaired(seurat.ls.small, features.ls,max.cutoff = 10)
+data.df <- purrr::reduce(data.ls,rbind)
+
+connections <- sample(data.ls[[1]]$cell_barcode,500)
+
+# ggplot(data.df,aes(x=UMAP_1,y=UMAP_2)) +
+#   geom_point(aes(col=cluster),size=0.1) +
+#   geom_line(aes(group=cell_barcode,col=cluster),alpha=0.01) +
+#   theme(panel.grid = element_blank()) #+ scale_color_viridis_c()
+
+theme_set(theme_minimal())
+col_pal <- c('grey70',viridis_pal(option = 'B')(20))
+
+ggplot(data.df,aes(x=UMAP_1,y=UMAP_2)) +
+  geom_point(aes(col=score),size=0.4) +
+  geom_line(aes(group=cell_barcode),alpha=0.04,size=0.2) +
+  theme(panel.grid = element_blank()) + scale_color_gradientn(colours = col_pal) + coord_cartesian(ylim=c(-3,3))
+ggsave(paste0(params$out_prefix,'/figures/figure_4/Lhx2_UMAP_connected.pdf'),width=12,height = 8 )
+```
+
+
+
+```{r Irx2, fig.width=8,fig.height=8}
+seurat.ls <- readRDS(file='/data/proj/GCB_MB/bcd_CT/single-cell/results/multiple_modalities/ATAC_H3K27ac_H3K27me3/seurat_multimodal/peaks/Seurat_object.Rds')
+# markers <- read.csv(file='/data/proj/GCB_MB/bcd_CT/single-cell/results/multimodal_data/single_modality/H3K27ac/seurat/peaks/markers/idents_short/markers.csv')
+
+
+# DimPlot(seurat.ls[[3]],group.by='idents_short',label=T) + NoLegend()
+
+seurat.ls.small <- lapply(seurat.ls[1:3],function(x){
+  x <- x[,x$idents_short %in% c("AST_TE","AST_NT")]
+  x
+})
+
+
+# markers.ls <- lapply(seurat.ls.small,FindAllMarkers)
+
+
+features.ls = list("ATAC"    = "chr13-72623831-72640434",
+                   "H3K27ac" = "chr13-72621500-72643323",
+                   "H3K27me3"="chr13-72621194-72642565")
+
+FeaturePlotPaired <- function(seurat.ls,features.ls, max.cutoff =2){
+  emb.ls <- lapply(names(seurat.ls),function(x){
+    seurat.x   <- seurat.ls[[x]]
+    embeddings <- scale(seurat.x@reductions[['umap']]@cell.embeddings)
+    if(x=='H3K27ac')  {embeddings[,1] <- embeddings[,1] + 10}
+    if(x=='H3K27me3') {embeddings[,1] <- embeddings[,1] + 20; embeddings[,2] <- -embeddings[,2]}
+    score      <- GetAssayData(object = seurat.x)[features.ls[[x]],]
+    to.plot    <- as.data.frame(cbind(embeddings,score))
+    to.plot$modality <- x
+    to.plot$cluster  <-seurat.ls[[x]]$idents_short[rownames(to.plot)] 
+    to.plot$cell_barcode <- rownames(to.plot)
+    to.plot$score[to.plot$score > max.cutoff] <- max.cutoff
+    return(to.plot)
+  })
+  
+}
+
+
+data.ls <- FeaturePlotPaired(seurat.ls.small, features.ls,max.cutoff = 10)
+data.df <- purrr::reduce(data.ls,rbind)
+
+connections <- sample(data.ls[[1]]$cell_barcode,500)
+
+# ggplot(data.df,aes(x=UMAP_1,y=UMAP_2)) +
+#   geom_point(aes(col=cluster),size=0.1) +
+#   geom_line(aes(group=cell_barcode,col=cluster),alpha=0.01) +
+#   theme(panel.grid = element_blank()) #+ scale_color_viridis_c()
+
+theme_set(theme_minimal())
+col_pal <- c('grey70',viridis_pal(option = 'B')(20))
+
+ggplot(data.df,aes(x=UMAP_1,y=UMAP_2)) +
+  geom_point(aes(col=score),size=0.4) +
+  geom_line(aes(group=cell_barcode),alpha=0.04,size=0.2) +
+  theme(panel.grid = element_blank()) + scale_color_gradientn(colours = col_pal) + coord_cartesian(ylim=c(-3,3))
+ggsave(paste0(params$out_prefix,'/figures/figure_4/Irx2_UMAP_connected.pdf'),width=12,height = 8 )
+```
+
+
+
+
+```{r Foxb1, fig.width=8,fig.height=8}
+seurat.ls <- readRDS(file='/data/proj/GCB_MB/bcd_CT/single-cell/results/multiple_modalities/ATAC_H3K27ac_H3K27me3/seurat_multimodal/peaks/Seurat_object.Rds')
+# markers <- read.csv(file='/data/proj/GCB_MB/bcd_CT/single-cell/results/multimodal_data/single_modality/H3K27ac/seurat/peaks/markers/idents_short/markers.csv')
+
+
+# DimPlot(seurat.ls[[3]],group.by='idents_short',label=T) + NoLegend()
+
+seurat.ls.small <- lapply(seurat.ls[1:3],function(x){
+  x <- x[,x$idents_short %in% c("AST_TE","AST_NT")]
+  x
+})
+
+
+# markers.ls <- lapply(seurat.ls.small,FindAllMarkers)
+
+
+features.ls = list("ATAC"     = "chr9-69754058-69772974",
+                   "H3K27ac"  = "chr9-69750612-69769655",
+                   "H3K27me3" = "chr9-69751617-69782935")
+
+FeaturePlotPaired <- function(seurat.ls,features.ls, max.cutoff =2){
+  emb.ls <- lapply(names(seurat.ls),function(x){
+    seurat.x   <- seurat.ls[[x]]
+    embeddings <- scale(seurat.x@reductions[['umap']]@cell.embeddings)
+    if(x=='H3K27ac')  {embeddings[,1] <- embeddings[,1] + 10}
+    if(x=='H3K27me3') {embeddings[,1] <- embeddings[,1] + 20; embeddings[,2] <- -embeddings[,2]}
+    score      <- GetAssayData(object = seurat.x)[features.ls[[x]],]
+    to.plot    <- as.data.frame(cbind(embeddings,score))
+    to.plot$modality <- x
+    to.plot$cluster  <-seurat.ls[[x]]$idents_short[rownames(to.plot)] 
+    to.plot$cell_barcode <- rownames(to.plot)
+    to.plot$score[to.plot$score > max.cutoff] <- max.cutoff
+    return(to.plot)
+  })
+  
+}
+
+
+data.ls <- FeaturePlotPaired(seurat.ls.small, features.ls,max.cutoff = 10)
+data.df <- purrr::reduce(data.ls,rbind)
+
+connections <- sample(data.ls[[1]]$cell_barcode,500)
+
+# ggplot(data.df,aes(x=UMAP_1,y=UMAP_2)) +
+#   geom_point(aes(col=cluster),size=0.1) +
+#   geom_line(aes(group=cell_barcode,col=cluster),alpha=0.01) +
+#   theme(panel.grid = element_blank()) #+ scale_color_viridis_c()
+
+theme_set(theme_minimal())
+col_pal <- c('grey70',viridis_pal(option = 'B')(20))
+
+ggplot(data.df,aes(x=UMAP_1,y=UMAP_2)) +
+  geom_point(aes(col=score),size=0.4) +
+  geom_line(aes(group=cell_barcode),alpha=0.04,size=0.2) +
+  theme(panel.grid = element_blank()) + scale_color_gradientn(colours = col_pal) + coord_cartesian(ylim=c(-3,3))
+ggsave(paste0(params$out_prefix,'/figures/figure_4/Foxb1_UMAP_connected.pdf'),width=12,height = 8 )
+```
 
 
 
