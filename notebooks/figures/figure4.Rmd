@@ -1,0 +1,116 @@
+---
+title: "R Notebook"
+output: html_notebook
+params:
+  out_prefix: "/data/proj/GCB_MB/bcd_CT/single-cell/results/"
+---
+
+
+```{r}
+library(Seurat)
+library(Signac)
+library(ggplot2)
+library(ggthemes)
+library(purrr)
+set.seed(1234)
+
+dir.create(paste0(params$out_prefix,'/figures/figure_4/'))
+```
+
+```{r, fig.width=8,fig.height=8}
+seurat.wnn <- readRDS(file=paste0(params$out_prefix,'/multimodal_data/WNN/seurat/Seurat_object_WNN.Rds'))
+seurat.ls  <- readRDS(file=paste0(params$out_prefix,'/multiple_modalities/ATAC_H3K27ac_H3K27me3/seurat_multimodal/peaks/Seurat_object.Rds'))
+
+seurat.ls <- lapply(seurat.ls, function(x){
+  x <- x[,Cells(seurat.wnn)]
+  x <- AddMetaData(x,seurat.wnn$idents_short,col.name='WNN.idents_short')
+  x
+})
+
+p1 <- DimPlot(seurat.wnn,group.by='idents_short',label=TRUE) + NoLegend() + ggtitle("WNN")
+p2 <- DimPlot(seurat.wnn,group.by='ATAC.idents_short',label=TRUE) + NoLegend() + ggtitle("ATAC-seq")
+p3 <- DimPlot(seurat.wnn,group.by='H3K27ac.idents_short',label=TRUE) + NoLegend() + ggtitle("H3K27ac")
+p4 <- DimPlot(seurat.wnn,group.by='H3K27me3.idents_short',label=TRUE) + NoLegend() + ggtitle("H3K27me3")
+
+p1 + p2 + p3 + p4 
+
+p1 <- DimPlot(seurat.wnn,group.by='idents_short',label=TRUE) + NoLegend() + ggtitle("WNN")
+p2 <- DimPlot(seurat.ls[[1]],group.by='WNN.idents_short',label=TRUE) + NoLegend() + ggtitle("ATAC-seq")
+p3 <- DimPlot(seurat.ls[[2]],group.by='WNN.idents_short',label=TRUE) + NoLegend() + ggtitle("H3K27ac")
+p4 <- DimPlot(seurat.ls[[3]],group.by='WNN.idents_short',label=TRUE) + NoLegend() + ggtitle("H3K27me3")
+
+p1 + p2 + p3 + p4 
+
+ggsave(plot= p1+p2+p3+p4,filename = paste0(params$out_prefix,'/figures/figure_4/WNN_UMAP.pdf'),width=12,height=12)
+
+```
+
+```{r, fig.width=20,fig.height=20}
+library(ggalluvial)
+
+modalities <- c('ATAC.','H3K27ac.','H3K27me3.','')
+
+
+
+idents.ls <- lapply(modalities, function(m){
+  df         <- data.frame('ident' = seurat.wnn@meta.data[,paste0(m,'idents_short')],
+                           'barcode' = rownames(seurat.wnn@meta.data),
+                           'modality' = m,
+                           'Freq' = 1)
+  df$modality[df$modality == ''] <- 'wnn'
+  df$modality <- gsub('\\.','',df$modality)
+  # levels(df$ident) <- sort(levels(df$ident))
+  df <- df[order(df$ident),]
+  return(df)
+
+})
+
+idents.df <- purrr::reduce(idents.ls,rbind)
+
+
+ggplot(data=idents.df, aes(x = modality, stratum = ident, alluvium = barcode, y = Freq, fill = ident, label = ident)) +
+  scale_x_discrete(expand = c(.1, .1)) +
+  geom_flow(alpha=0.8) +
+  geom_stratum(alpha = 1) +
+  geom_text(stat = "stratum", size = 5) +
+  theme_minimal()+
+  theme(legend.position = "none") 
+ 
+ggsave(filename=paste0(params$out_prefix,'/figures/figure_4/allevium_WNN.pdf'),width=10,height=14)
+```
+```{r}
+library(ChIPpeakAnno)
+
+top.features.ls <- lapply(seurat.ls[1:3],function(seurat){
+  top.features <- apply(Loadings(seurat,reduction = 'lsi')[,2:50],2,function(x){
+    top    <- x[x > quantile(x,0.98)]
+    bottom <- x[x < quantile(x,0.02)]
+    return(c(names(top),names(bottom)))
+    })
+  
+  top.features <- as.character(top.features)
+  top.features <- StringToGRanges(top.features)
+  top.features$modality <- unique(seurat$modality)
+  return(top.features)
+})
+
+top.features.ls <- lapply(top.features.ls,unique)
+gr <- c(top.features.ls[[1]],top.features.ls[[2]],top.features.ls[[3]])
+grl <- splitAsList(gr, gr$modality)
+
+pdf(file=paste0(params$out_prefix,'/figures/figure_4/overlap_Venn.pdf'),width = 5,height = 5)
+res <- makeVennDiagram(Peaks=grl, NameOfPeaks=names(grl))
+dev.off()
+
+
+
+```
+
+
+
+
+
+
+
+
+

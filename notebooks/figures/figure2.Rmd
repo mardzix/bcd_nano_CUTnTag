@@ -1,0 +1,465 @@
+---
+title: "R Notebook"
+output: html_notebook
+params:
+  out_prefix: "/data/proj/GCB_MB/bcd_CT/single-cell/results/"
+---
+
+```{r}
+library(Seurat)
+library(Signac)
+library(ggplot2)
+library(ggthemes)
+library(purrr)
+library(caret)
+
+set.seed(1234)
+```
+
+```{r Fig2b,fig.width=10,fig.height=4}
+seurat.ls <- readRDS(file=paste0(params$out_prefix,'/multiple_modalities/ATAC_H3K27ac_H3K27me3/seurat_multimodal/peaks/Seurat_object.Rds'))
+
+metadata <- list()
+
+for(i in 1:length(seurat.ls[1:3])){
+    metadata[[i]]                       <- as.data.frame(seurat.ls[[i]]@meta.data[,'logUMI'])
+    metadata[[i]]$cell_barcode          <- rownames(seurat.ls[[i]]@meta.data)
+    metadata[[i]]$modality              <- unique(seurat.ls[[i]]$modality)
+    metadata[[i]]$experiment            <- seurat.ls[[i]]@meta.data[,'sample']
+    colnames(metadata[[i]])             <- c('logUMI','cell_barcode','modality','sample')
+}
+
+metadata <- purrr::reduce(.x = metadata,.f = rbind)
+
+ggplot(data=metadata) + geom_violin(aes(x=sample,fill=modality,y=logUMI),width=0.6) + theme_classic() + theme(text = element_text(size=16)) + xlab("")
+
+
+dir.create(paste0(params$out_prefix,'/figures/figure_2/'),recursive = TRUE)
+ggsave(filename = paste0(params$out_prefix,'/figures/figure_2/Violin_logUMI.pdf'),width=10,height=4,bg='transparent')
+
+```
+
+
+```{r Fig2c,fig.width=10,fig.height=4}
+seurat.ls <- readRDS(file=paste0(params$out_prefix,'/multiple_modalities/ATAC_H3K27ac_H3K27me3/seurat_multimodal/peaks/Seurat_object.Rds'))
+
+metadata <- list()
+
+for(i in 1:length(seurat.ls[1:3])){
+    metadata[[i]]                       <- as.data.frame(seurat.ls[[i]]@meta.data[,'peak_ratio_MB'])
+    metadata[[i]]$cell_barcode          <- rownames(seurat.ls[[i]]@meta.data)
+    metadata[[i]]$modality              <- unique(seurat.ls[[i]]$modality)
+    metadata[[i]]$experiment            <- seurat.ls[[i]]@meta.data[,'sample']
+    colnames(metadata[[i]])             <- c('FrIP','cell_barcode','modality','sample')
+}
+
+metadata <- purrr::reduce(.x = metadata,.f = rbind)
+
+ggplot(data=metadata,aes(x=sample,fill=modality,y=FrIP)) + 
+  geom_violin(width=0.6) + 
+  theme_classic() + 
+  theme(text = element_text(size=16)) + xlab("")
+ggsave(filename = paste0(params$out_prefix,'/figures/figure_2/Violin_FrIP.pdf'),width=10,height=4,bg='transparent')
+
+```
+
+
+
+```{r Fig_2d, fig.width=15, fig.height=5}
+seurat <- readRDS(file=paste0(params$out_prefix,'/multiple_modalities/ATAC_H3K27ac_H3K27me3/seurat_multimodal/peaks/Seurat_object.Rds'))
+
+
+nmodalities      = 3 
+umap_embeddings <- list()
+
+for(i in 1:length(seurat[1:nmodalities])){
+  umap_embeddings[[i]]               <- as.data.frame(seurat[[i]]@reductions[['umap']]@cell.embeddings)
+  umap_embeddings[[i]]$UMAP_1        <- umap_embeddings[[i]]$UMAP_1 + (i-1)*40
+  umap_embeddings[[i]]$modality      <- unique(seurat[[i]]$modality)
+  umap_embeddings[[i]]$cluster       <- seurat[[i]]$idents_L1
+  umap_embeddings[[i]]$cell_barcode  <- rownames(umap_embeddings[[i]])
+
+}
+
+umap.embeddings.merge               <- purrr::reduce(umap_embeddings,rbind)
+common.cells                        <- table(umap.embeddings.merge$cell_barcode)
+common.cells                        <- names(common.cells[common.cells==nmodalities])
+
+umap.embeddings.merge               <- umap.embeddings.merge[umap.embeddings.merge$cell_barcode %in% common.cells,]
+
+# ggplot(data=umap.embeddings.merge,aes(x=UMAP_1,y=UMAP_2,col=cluster)) + geom_point(size=0.2) + geom_line()
+
+cells.connect <- sample(umap.embeddings.merge$cell_barcode,5000)
+
+
+p1 <- ggplot(data=umap.embeddings.merge,aes(x=UMAP_1,y=UMAP_2,col=cluster)) + 
+  geom_point(size=0.2) + 
+  geom_line(data=umap.embeddings.merge, aes(group=cell_barcode,col=cluster),alpha=0.2,size=0.02) + 
+  theme_classic() + NoAxes() + NoLegend() 
+
+p1
+
+dir.create(paste0(params$out_prefix,'/figures/figure_2/'),recursive=TRUE)
+ggsave(filename = paste0(params$out_prefix,'/figures/figure_2/UMAP_with_connections.png'),width=15,height=5,bg='transparent')
+```
+```{r Fig_2e_UMAP_clusters_annotated}
+seurat <- readRDS(file = paste0(params$out_prefix,'/multiple_modalities/ATAC_H3K27ac_H3K27me3/seurat_multimodal/peaks/Seurat_object.Rds'))
+
+p.ls <- lapply(names(seurat[1:3]),function(x){
+  DimPlot(seurat[[x]],group.by='idents_short',label=TRUE,repel=TRUE) + NoLegend() + ggtitle(x)  
+})
+names(p.ls) <- names(seurat[1:3])
+
+lapply(names(seurat[1:3]),function(x){
+  ggsave(plot = p.ls[[x]],filename = paste0(params$out_prefix,'/figures/figure_2/UMAP_',x,'_signle.png'),width=6,height=6)
+})
+
+```
+
+
+```{r fig.width=12,fig.height=6}
+integration <- readRDS(file = paste0(params$out_prefix,'/multimodal_data/single_modality/H3K27ac/seurat/peaks/integration/integration_RNA.Rds'))
+seurat.H3K27ac <- readRDS(file= paste0(params$out_prefix,'/multimodal_data/single_modality/H3K27ac/seurat/peaks/Seurat_object_clustered_renamed.Rds'))
+
+integration <- AddMetaData(object = integration,metadata = seurat.H3K27ac$idents_short,col.name='idents_short')
+
+p1 <- DimPlot(integration[,integration$experiment == 'bcdCT'],group.by='idents_short',label=TRUE) + NoLegend()
+p2 <- DimPlot(integration[,integration$experiment == 'scRNAseq'],group.by='ClusterName',repel=TRUE,label=TRUE,label.size=2) + NoLegend()
+
+p1+p2
+ggsave(plot = p1+p2,filename = paste0(params$out_prefix,'/figures/figure_2/RNA_H3K27ac_integration.png'),width=20,height=10)
+
+```
+
+
+
+```{r fig.width=12,fig.height=6}
+integration <- readRDS(file = paste0(params$out_prefix,'/multimodal_data/single_modality/ATAC/seurat/peaks/integration/integration_RNA.Rds'))
+seurat.ATAC <- readRDS(file= paste0(params$out_prefix,'/multimodal_data/single_modality/ATAC/seurat/peaks/Seurat_object_clustered_renamed.Rds'))
+
+integration <- AddMetaData(object = integration,metadata = seurat.ATAC$idents_short,col.name='idents_short')
+
+p1 <- DimPlot(integration[,integration$experiment == 'bcdCT'],group.by='idents_short',label=TRUE) + NoLegend()
+p2 <- DimPlot(integration[,integration$experiment == 'scRNAseq'],group.by='ClusterName',repel=TRUE,label=TRUE,label.size=2) + NoLegend()
+
+p1+p2
+ggsave(plot = p1+p2,filename = paste0(params$out_prefix,'/figures/figure_2/RNA_ATAC_integration.png'),width=20,height=10)
+
+```
+
+```{r,fig.width=6,fig.height=6}
+seurat <- readRDS(file=paste0(params$out_prefix,'/multiple_modalities/ATAC_H3K27ac_H3K27me3/seurat_multimodal/peaks/Seurat_object.Rds'))
+nmodalities      = 3 
+metadata <- list()
+```
+
+
+
+```{r}
+cm <- function(seurat.ls,id.x = 1, id.y = 2, identities = 'idents_short',group='idents_L1'){
+  for(i in 1:length(seurat.ls)){
+    metadata[[i]]                       <- as.data.frame(seurat.ls[[i]]@meta.data[,identities])
+    metadata[[i]]$cell_barcode          <- rownames(seurat.ls[[i]]@meta.data)
+    metadata[[i]]$modality              <- unique(seurat.ls[[i]]$modality)
+    metadata[[i]]$group                 <- seurat.ls[[i]]@meta.data[,group]
+    colnames(metadata[[i]])             <- c('cluster','cell_barcode','modality','group')
+  }
+  
+  name.x <- names(seurat.ls)[id.x]
+  name.y <- names(seurat.ls)[id.y]
+  
+  a       <- merge(metadata[[id.x]],metadata[[id.y]],by='cell_barcode')
+  
+  all.factors <- c(a$cluster.x,a$cluster.y)
+  all.factors <- setNames(all.factors,c(a$group.x,a$group.y))
+  all.factors <- droplevels(all.factors[!duplicated(all.factors)])
+  all.factors <- all.factors[order(names(all.factors), as.character(all.factors))]
+  
+  a       <- a[,c('cluster.x','cluster.y')]
+  a       <- table(a)
+  
+  # Reorder 
+  a       <- a[as.character(sort(factor(rownames(a),levels=all.factors))),as.character(sort(factor(colnames(a),levels=all.factors)))]
+  a       <- apply(a,1,function(x){x/(sum(x))})
+  
+  row_annot <- unique(metadata[[id.y]][,c('cluster','group')])
+#  row_annot <- row_annot[order(row_annot$group,row_annot$cluster),]
+  rownames(row_annot) <- row_annot$cluster
+  colnames(row_annot) <- c('cluster',name.y)
+  row_annot$cluster <- NULL
+  
+  col_annot <- unique(metadata[[id.x]][,c('cluster','group')])
+  #col_annot <- col_annot[order(col_annot$group,col_annot$cluster),]
+  rownames(col_annot) <- col_annot$cluster
+  colnames(col_annot) <- c('cluster',name.x)
+  col_annot$cluster <- NULL
+  
+
+  
+#  a <- a[na.omit(match(rownames(row_annot),rownames(a))),]
+#  a <- a[,na.omit(match(rownames(col_annot),colnames(a)))]
+  
+  return(list('matrix' = a,'row_annot' = row_annot,'col_annot' = col_annot))
+}
+
+
+fig.width=6
+fig.height= 6
+
+a <- cm(seurat[1:3],id.x = 1, id.y=2,identities = 'idents_short')
+pdf(paste0(params$out_prefix,'/figures/figure_2/confusion_matrix_ATAC_H3K27ac.pdf'),width=fig.width,height=fig.height)
+pheatmap(mat = a[['matrix']],border_color = 'black', 
+         annotation_row = a[['row_annot']],annotation_col = a[['col_annot']],
+         treeheight_row = 0, treeheight_col = 0,
+         cluster_cols = FALSE,cluster_rows = FALSE)
+dev.off()
+
+a <- cm(seurat[1:3],id.x = 1, id.y=3,identities = 'idents_short')
+pdf(paste0(params$out_prefix,'/figures/figure_2/confusion_matrix_ATAC_H3K27me3.pdf'),width=fig.width,height=fig.height)
+pheatmap(mat = a[['matrix']],border_color = 'black', 
+         annotation_row = a[['row_annot']],annotation_col = a[['col_annot']],
+         treeheight_row = 0, treeheight_col = 0,
+         cluster_cols = FALSE,cluster_rows = FALSE)
+dev.off()
+
+a <- cm(seurat[1:3],id.x = 2, id.y=3,identities = 'idents_short')
+pdf(paste0(params$out_prefix,'/figures/figure_2/confusion_matrix_H3K27ac_H3K27me3.pdf'),width=fig.width,height=fig.height)
+pheatmap(mat = a[['matrix']],border_color = 'black', 
+         annotation_row = a[['row_annot']],annotation_col = a[['col_annot']],
+         treeheight_row = 0, treeheight_col = 0,
+         cluster_cols = FALSE,cluster_rows = FALSE)
+dev.off()
+
+
+
+
+fig.width=6
+fig.height= 4
+
+a <- cm(seurat[1:3],id.x = 1, id.y=2,identities = 'idents_L1')
+pdf(paste0(params$out_prefix,'/figures/figure_2/confusion_matrix_ATAC_H3K27ac_L1.pdf'),width=fig.width,height=fig.height)
+pheatmap(mat = a[['matrix']],border_color = 'black', 
+         annotation_row = a[['row_annot']],annotation_col = a[['col_annot']],
+         treeheight_row = 0, treeheight_col = 0,
+         cluster_cols = FALSE,cluster_rows = FALSE)
+dev.off()
+
+a <- cm(seurat[1:3],id.x = 1, id.y=3,identities = 'idents_L1')
+pdf(paste0(params$out_prefix,'/figures/figure_2/confusion_matrix_ATAC_H3K27me3_L1.pdf'),width=fig.width,height=fig.height)
+pheatmap(mat = a[['matrix']],border_color = 'black', 
+         annotation_row = a[['row_annot']],annotation_col = a[['col_annot']],
+         treeheight_row = 0, treeheight_col = 0,
+         cluster_cols = FALSE,cluster_rows = FALSE)
+dev.off()
+
+a <- cm(seurat[1:3],id.x = 2, id.y=3,identities = 'idents_L1')
+pdf(paste0(params$out_prefix,'/figures/figure_2/confusion_matrix_H3K27ac_H3K27me3_L1.pdf'),width=fig.width,height=fig.height)
+pheatmap(mat = a[['matrix']],border_color = 'black', 
+         annotation_row = a[['row_annot']],annotation_col = a[['col_annot']],
+         treeheight_row = 0, treeheight_col = 0,
+         cluster_cols = FALSE,cluster_rows = FALSE)
+dev.off()
+
+
+```
+
+
+```{r,fig.width=6,fig.height=6}
+cm <- function(seurat.ls,id.x = 1, id.y = 2, identities = 'idents_short'){
+  for(i in 1:length(seurat.ls)){
+    metadata[[i]]                       <- as.data.frame(seurat.ls[[i]]@meta.data[,identities])
+    metadata[[i]]$cell_barcode          <- rownames(seurat.ls[[i]]@meta.data)
+    metadata[[i]]$modality              <- unique(seurat.ls[[i]]$modality)
+    colnames(metadata[[i]])             <- c('cluster','cell_barcode','modality')
+  }
+  
+  all.factors <- unique(purrr::reduce(lapply(metadata,function(x){x$cluster}),c))
+  metadata    <- lapply(metadata,function(x){x$cluster <- factor(x$cluster,levels=all.factors);return(x) })
+
+  a       <- merge(metadata[[id.x]],metadata[[id.y]],by='cell_barcode')
+  a       <- a[,c('cluster.x','cluster.y')]
+  a       <- table(a)
+  a       <- a[rowSums(a) > 0, colSums(a) > 0]
+  a       <- a[order(rowSums(a),decreasing = TRUE),]
+  a       <- apply(a,1,function(x){x/(sum(x))})
+  
+  # Re-order the matrix
+  row.max <- unname(apply(a,1,which.max))
+  row.max <- unique(colnames(a)[row.max])
+  row.max <- c(row.max, setdiff(colnames(a),row.max))
+
+  a <- a[,row.max]
+  
+  return(a)
+  
+  # pheatmap(mat = to.plot)
+}
+
+library(pheatmap)
+library(viridis)
+
+combinations <- unlist(apply(combn(1:nmodalities,2),2,list),recursive = FALSE)
+identities   <- c("idents_L1","idents_L2","idents_L3","seurat_clusters")
+identities   <- c("idents_short")
+
+cm.list <- lapply(identities, function(ident){
+  pdf(paste0(params$out_prefix,'/figures/figure_2/Confusion_matrix_',ident,'.pdf'),width = 10,height=10)
+  lapply(combinations,function(comb){
+    cm1 <- cm(seurat[1:3],id.x = comb[1],id.y = comb[2],identities = ident)
+    names(cm1) <- identities
+    p <- pheatmap(cm1,
+             cluster_rows = F,
+             cluster_cols = F,
+             main = paste(unique(seurat[[comb[1]]]$modality),
+                          unique(seurat[[comb[2]]]$modality),
+                          ident),fontsize = 30)
+    # plot.new()
+    return(p)
+  })
+  dev.off()
+})
+
+```
+
+```{r Extended_figure_4b_UMI_multimodal_vs_nbiotech}
+nbiotech.samples <- c(paste0("H3K27me3_N",c(1,2,3,4)),paste0("H3K27ac_N",c(1,2)))
+nbiotech.files   <- paste0(params$out_prefix,'/nbiotech_data/',nbiotech.samples,'/seurat/bin_5000/Seurat_object.Rds')
+
+nbiotech.ls                     <- lapply(nbiotech.files, readRDS)
+nbiotech.logUMI.ls <- lapply(nbiotech.ls,function(x){x$logUMI})
+names(nbiotech.logUMI.ls) <- nbiotech.samples
+
+multimodal <- paste0(params$out_prefix,'/multiple_modalities/H3K27ac_H3K27me3/seurat_multimodal/peaks/Seurat_object.Rds')
+multimodal <- readRDS(multimodal)
+
+multimodal.logUMI.ls <- lapply(multimodal[1:2],function(x){x$logUMI})
+
+df.to.plot.ls <-  lapply(names(nbiotech.logUMI.ls),function(x){nbiotech.logUMI.ls[[x]] <- data.frame('sample'=x, 'logUMI' = nbiotech.logUMI.ls[[x]], 'modality' = 'single')})
+df.to.plot.ls[['multimodal_H3K27ac']] <- data.frame('sample'='H3K27ac', 'logUMI' = multimodal.logUMI.ls[['H3K27ac']],'modality'='multimodal')
+df.to.plot.ls[['multimodal_H3K27me3']] <- data.frame('sample'='H3K27me3', 'logUMI' = multimodal.logUMI.ls[['H3K27me3']],'modality'='multimodal')
+
+
+df.to.plot <- purrr::reduce(df.to.plot.ls, rbind)
+df.to.plot$sample <- factor(df.to.plot$sample,levels = unique(df.to.plot$sample))
+
+p1 <-ggplot(data=df.to.plot,aes(x=sample,fill=modality,y=logUMI)) + geom_violin() + theme_bw() + coord_flip() + xlab('')
+p1
+
+ggsave(plot = p1, filename = paste0(params$out_prefix,'/figures/figure_2/LogUMI_multimodal_vs_scCUTnTag.pdf'),width=8,height=4)
+```
+
+
+```{r Extended_figure_4b_FRIP_multimodal_vs_nbiotech}
+nbiotech.samples <- c(paste0("H3K27me3_N",c(1,2,3,4)),paste0("H3K27ac_N",c(1,2)))
+nbiotech.files   <- paste0(params$out_prefix,'/nbiotech_data/',nbiotech.samples,'/seurat/bin_5000/Seurat_object.Rds')
+
+nbiotech.ls                     <- lapply(nbiotech.files, readRDS)
+nbiotech.FRIP.ls <- lapply(nbiotech.ls,function(x){x$peak_ratio_MB})
+names(nbiotech.FRIP.ls) <- nbiotech.samples
+
+multimodal <- paste0(params$out_prefix,'/multiple_modalities/H3K27ac_H3K27me3/seurat_multimodal/peaks/Seurat_object.Rds')
+multimodal <- readRDS(multimodal)
+
+multimodal.FRIP.ls <- lapply(multimodal[1:2],function(x){x$peak_ratio_MB})
+
+df.to.plot.ls <-  lapply(names(nbiotech.FRIP.ls),function(x){nbiotech.FRIP.ls[[x]] <- data.frame('sample'=x, 'FRIP' = nbiotech.FRIP.ls[[x]], 'modality' = 'single')})
+df.to.plot.ls[['multimodal_H3K27ac']] <- data.frame('sample'='H3K27ac', 'FRIP' = multimodal.FRIP.ls[['H3K27ac']],'modality'='multimodal')
+df.to.plot.ls[['multimodal_H3K27me3']] <- data.frame('sample'='H3K27me3', 'FRIP' = multimodal.FRIP.ls[['H3K27me3']],'modality'='multimodal')
+
+
+df.to.plot <- purrr::reduce(df.to.plot.ls, rbind)
+df.to.plot$sample <- factor(df.to.plot$sample,levels = unique(df.to.plot$sample))
+
+p1 <-ggplot(data=df.to.plot,aes(x=sample,fill=modality,y=FRIP)) + geom_violin() + theme_bw() + coord_flip() + xlab('')
+p1
+
+ggsave(plot = p1, filename = paste0(params$out_prefix,'/figures/figure_2/FRIP_multimodal_vs_scCUTnTag.pdf'),width=8,height=4)
+```
+```{r H3K27ac_markers_currated, fig.width=15,fig.height=15}
+library(dplyr)
+library(gridExtra)
+library(Seurat)
+library(Signac)
+library(ggplot2)
+
+seurat.ls  <- readRDS(file=paste0(params$out_prefix,'/multiple_modalities/ATAC_H3K27ac_H3K27me3/seurat_multimodal/peaks/Seurat_object.Rds'))
+
+markers.ls <- lapply(names(seurat.ls[1:3]),function(x){
+  markers <- read.csv(file = paste0(params$out_prefix,'/multimodal_data/single_modality/',x,'/seurat/peaks/markers/idents_L3/markers.csv'))
+  markers.top <- markers %>% group_by(cluster) %>% top_n(n = 20,wt = avg_log2FC) %>% dplyr::select(gene,closest_gene)
+  return(markers.top)
+})
+
+names(markers.ls) <- names(seurat.ls[1:3])
+
+markers <- c(
+  'chr2-38346331-38368102', # AST_TE    Lhx2
+  'chr6-114143211-114167487', # AST_NTE Slc6a11
+  'chr16-95432175-95466802', # VEC Erg
+  'chr7-30904426-30922848', # OLG Mag
+  'chr4-136884496-136899230', # MGL C1qb
+  'chr2-79442492-79463028', # EXC1 Neurod1
+  'chr11-118880858-118916602', # Neu Rbfox3
+  'chr2-70556029-70574251', # Inh Gad1
+  'chr6-6844658-6885776', # Inh Dlx6
+  'chr1-78163533-78207167', # Bergman, Astro_3 Pax3
+  'chr13-31797281-31832324', # Pericytes Foxc1
+  'chr9-75070193-75112142',  # Macrophages Myo5a
+  'chr9-87728925-87740896', # VLMC Tbx18
+  'chr6-17064579-17093785', # OEC Tes
+  'chr11-64484439-64501576', # Astro_4 Hs3st3a1
+  'chr6-116714660-116725147', # CHP Tmem72
+  'chr11-85818228-85853070', # VSMC Bcas3
+  'chr16-43958390-43983071' # EPE
+)
+
+
+p.ls <- FeaturePlot(seurat.ls[[2]],markers,combine = FALSE,max.cutoff = 3,col=c('grey99','blue'))
+p.ls <- lapply(1:length(p.ls), function(x){
+  closest_gene <- markers.ls[[2]][match(markers[x],markers.ls[[2]]$gene),'closest_gene']
+  p.ls[[x]] + ggtitle(paste0(closest_gene,'   ', markers[x]))
+  })
+
+png(filename = paste0(params$out_prefix,'/figures/figure_2/H3K27ac_markers_UMAP.png'),width=20,height=20,units='in',res=300)
+do.call('grid.arrange',p.ls)
+dev.off()
+
+
+
+png(filename = paste0(params$out_prefix,'/figures/figure_2/H3K27ac_markers_Vln.png'),width=20,height=20,units='in',res = 300)
+VlnPlot(seurat.ls[[2]],features = markers,group.by = 'idents_short',) + NoLegend()
+dev.off()
+```
+
+
+
+```{r non_currated_markers, fig.width=15,fig.height=15}
+markers.ls <- lapply(names(seurat.ls[1:3]),function(x){
+  markers <- read.csv(file = paste0(params$out_prefix,'/multimodal_data/single_modality/',x,'/seurat/peaks/markers/idents_L3/markers.csv'))
+  markers.top <- markers %>% group_by(cluster) %>% top_n(n = 1,wt = -log(p_val_adj))
+  return(markers.top)
+})
+
+# ATAC
+
+p.ls <- lapply(as.list(as.data.frame(t(markers.ls[[1]]))), function(m){
+  FeaturePlot(seurat.ls[[1]],features = m[8], cols=c('grey99','red')) + NoLegend() + ggtitle(paste0(m[9],'  ',m[8]))
+})
+do.call('grid.arrange', p.ls)
+
+# H3K27ac
+
+p.ls <- lapply(as.list(as.data.frame(t(markers.ls[[2]]))), function(m){
+  FeaturePlot(seurat.ls[[2]],features = m[8], cols=c('grey99','red')) + NoLegend() + ggtitle(paste0(m[9],'  ',m[8]))
+})
+do.call('grid.arrange', p.ls)
+
+# H3K27me3
+
+p.ls <- lapply(as.list(as.data.frame(t(markers.ls[[3]]))), function(m){
+  FeaturePlot(seurat.ls[[3]],features = m[8], cols=c('grey99','red')) + NoLegend() + ggtitle(paste0(m[9],'  ',m[8]))
+})
+do.call('grid.arrange', p.ls)
+```
+
+

@@ -135,6 +135,17 @@ seurat_object[['GA']] <- CreateAssayObject(counts = gene.matrix[,Cells(seurat_ob
                                            min.cells = min_cells,
                                            min.features = min_features)
 
+################### Remove cells with very high number of reads
+cat("*** Removing cells with very high UMI count \n")
+logUMI_cutoff_high <- quantile(seurat_object$logUMI, 0.95)
+logUMI_cutoff_low  <- quantile(seurat_object$logUMI, 0.05)
+
+cat("*** Removing ",sum(seurat_object$logUMI < logUMI_cutoff_low)," cells for having UMI less than ",logUMI_cutoff_low,", \n")
+cat("*** Removing ",sum(seurat_object$logUMI > logUMI_cutoff_high)," cells for having UMI more than ",logUMI_cutoff_high,", \n")
+
+seurat_object <- seurat_object[,seurat_object$logUMI > logUMI_cutoff_low]
+seurat_object <- seurat_object[,seurat_object$logUMI < logUMI_cutoff_high]
+
 ######### Save the object
 cat("*** Save the object \n")
 dir.create(args$out_prefix,recursive = TRUE)

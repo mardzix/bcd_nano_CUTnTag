@@ -17,7 +17,7 @@ library(dplyr)
 
 ```{r load_data}
 
-seurat.ls <- readRDS(file=paste0(params$out_prefix,'multiple_modalities/ATAC_H3K27ac_H3K27me3/seurat_5000/Seurat_object_clustered.Rds'))
+seurat.ls <- readRDS(file='/data/proj/GCB_MB/bcd_CT/single-cell/results/multiple_modalities/ATAC_H3K27ac_H3K27me3/seurat_multimodal/peaks/Seurat_object.Rds')
 
 ```
 
