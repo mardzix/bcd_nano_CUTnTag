@@ -1,0 +1,236 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(Seurat)
+library(Signac)
+library(ggplot2)
+library(viridis)
+library(patchwork)
+library(pheatmap)
+library(ggthemes)
+```
+
+```{r, fig.width=8,fig.height=4}
+seurat    <- readRDS(file='/data/proj/GCB_MB/bcd_CT/single-cell/results/multimodal_data/WNN/seurat/pseudotime/Seurat_object_WNN_pseudotime.Rds')
+
+p1 <- FeaturePlot(seurat,'pt') + scale_color_viridis_c() + ggtitle('pseudotime')
+p2 <- DimPlot(seurat,group.by='idents_short') + NoLegend() + ggtitle('')
+
+p1 | p2
+
+dir.create('/data/proj/GCB_MB/bcd_CT/single-cell/results/figures/figure_5',recursive = T)
+ggsave(filename = '/data/proj/GCB_MB/bcd_CT/single-cell/results/figures/figure_5/UMAP_pseudotime.pdf',width=10,height=5,plot = p1|p2)
+```
+
+```{r, fig.width=10,fig.height=4}
+seurat.ls <- readRDS(file='/data/proj/GCB_MB/bcd_CT/single-cell/results/multiple_modalities/ATAC_H3K27ac_H3K27me3/seurat_multimodal/peaks/Seurat_object.Rds')
+
+seurat.ls <- lapply(seurat.ls,function(x){
+  x <- x[,Cells(seurat)]
+  x <- AddMetaData(x,metadata = seurat$pt,col.name = 'pseudotime') 
+  x
+})
+
+p.ls <- lapply(seurat.ls[1:3],function(x){FeaturePlot(x,'pseudotime') + scale_color_viridis_c() + ggtitle(unique(x$modality)) }) 
+p.ls[[1]] | p.ls[[2]] | p.ls[[3]]
+
+ggsave(filename = '/data/proj/GCB_MB/bcd_CT/single-cell/results/figures/figure_5/UMAP_pseudotime_3modalities.pdf',width=15,height=5,plot = p.ls[[1]]|p.ls[[2]] | p.ls[[3]])
+
+```
+
+```{r}
+modalities <- unlist(lapply(seurat.ls[1:3], function(x){unique(x$modality)}))
+modalities
+# ATAC    H3K27ac   H3K27me3 
+# "ATAC"  "H3K27ac" "H3K27me3" 
+    
+
+heatmap.ls <- list()
+
+for(i in modalities){
+  heatmap.ls[[i]] <- list()
+  markers <- read.csv(file=paste0('/data/proj/GCB_MB/bcd_CT/single-cell/results/multimodal_data/single_modality/',i,'/seurat/peaks/markers/idents_short/markers.csv'))
+  for(x in modalities){
+    # markers.mol <- markers[markers$cluster %in% c('MOL','OPC'),]
+    markers.mol <- markers[markers$cluster == 'MOL',]
+    markers.mol <- markers.mol[markers.mol$avg_log2FC > 0,]
+    markers.mol <- markers.mol[order(markers.mol$avg_log2FC,decreasing=TRUE),]
+    markers.mol <- markers.mol[markers.mol$p_val_adj < 0.05 ,]
+    markers.mol <- head(markers.mol,200)
+    
+    DefaultAssay(seurat) <- paste0('peaks_',x)
+    op <- findOverlaps(query = StringToGRanges(rownames(seurat)), StringToGRanges(markers.mol$gene))
+    
+    d <- GetAssayData(object = seurat,slot = 'data',assay = paste0('peaks_',x))  
+    heatmap.ls[[i]][[x]] <- d[unique(queryHits(op)),order(seurat$pt)]
+  }
+}
+
+col_annot <- data.frame(row.names = rownames(seurat@meta.data),
+                        'cluster' = seurat@meta.data[,'idents_short'],
+                        'pt' = seurat$pt)
+
+
+```
+
+
+```{r, fig.width=12,fig.height=6}
+df.ls <- list()
+for(m in modalities){
+  hm           <- heatmap.ls[['H3K27ac']][[m]]
+  df <-data.frame('score'    = colSums(hm), 
+                  'pt'       = seurat$pt[colnames(hm)],
+                  'modality' = m)
+  df.ls[[m]] <- df
+}
+
+
+df.merged <- purrr::reduce(df.ls, rbind)
+p <- ggplot(data=df.merged,aes(x=pt,y=score,col=modality)) + geom_point(size=0.4) + geom_smooth(method='loess')
+p
+
+ggsave(plot=p, filename  = '/data/proj/GCB_MB/bcd_CT/single-cell/results/figures/figure_5/pseudotime_H3K27ac_sites.pdf',width=6,height=3)
+```
+
+```{r, fig.width=12,fig.height=6}
+df.ls <- list()
+for(m in modalities){
+  hm           <- heatmap.ls[['ATAC']][[m]]
+  df <-data.frame('score'    = colSums(hm), 
+                  'pt'       = seurat$pt[colnames(hm)],
+                  'modality' = m)
+  df.ls[[m]] <- df
+}
+
+
+df.merged <- purrr::reduce(df.ls, rbind)
+p <- ggplot(data=df.merged,aes(x=pt,y=score,col=modality)) + geom_point(size=0.4) + geom_smooth(method='loess')
+p
+
+ggsave(plot=p, filename  = '/data/proj/GCB_MB/bcd_CT/single-cell/results/figures/figure_5/pseudotime_ATAC_sites.pdf',width=6,height=3)
+```
+
+```{r, fig.width=12,fig.height=6}
+a <- sort(kmeans(x=heatmap.ls[['H3K27me3']][['H3K27me3']],centers = 2)$cluster)
+
+df.ls <- list()
+for(m in modalities){
+  for(cluster in unique(a)){
+    hm           <- heatmap.ls[['H3K27me3']][[m]]
+    op           <- findOverlaps(query = StringToGRanges(names(a[a==cluster])),subject = StringToGRanges(rownames(seurat.ls[[m]])))
+    rows.cluster <- rownames(seurat.ls[[m]])[subjectHits(op)]
+    
+    df <-data.frame('score'    = colSums(hm[rows.cluster,]), 
+                    'pt'       = seurat$pt[colnames(hm)],
+                    'modality' = m,
+                    'cluster'  = cluster)
+    df.ls[[paste0(m,'_',cluster)]] <- df
+  }
+}
+
+
+df.merged <- purrr::reduce(df.ls, rbind)
+p <- ggplot(data=df.merged,aes(x=pt,y=score,col=modality)) + geom_point(size=0.4) + geom_smooth(method='loess') + facet_wrap(~cluster,scales = 'free')
+p
+ggsave(plot=p, '/data/proj/GCB_MB/bcd_CT/single-cell/results/figures/figure_5/pseudotime_H3K27me3_sites_dots.pdf',width=10,height=4)
+
+```
+
+
+
+
+```{r}
+a <- sort(kmeans(x=heatmap.ls[['H3K27me3']][['H3K27me3']],centers = 2)$cluster)
+pheatmap(heatmap.ls[['H3K27me3']][['H3K27me3']][names(a),],cluster_cols = F,cluster_rows = F,show_colnames = F,show_rownames=F,annotation_col = col_annot)
+
+pdf(file = '/data/proj/GCB_MB/bcd_CT/single-cell/results/figures/figure_5/pseudotime_H3K27me3_heatmap.pdf',width=6,height=6)
+pheatmap(heatmap.ls[['H3K27me3']][['H3K27me3']][names(a),],cluster_cols = F,cluster_rows = F,show_colnames = F,show_rownames=F,annotation_col = col_annot)
+dev.off()
+```
+
+
+```{r}
+library(clusterProfiler)
+library(org.Mm.eg.db)
+
+for(i in modalities){
+  heatmap.ls[[i]] <- list()
+  markers <- read.csv(file=paste0('/data/proj/GCB_MB/bcd_CT/single-cell/results/multimodal_data/single_modality/',i,'/seurat/peaks/markers/idents_short/markers.csv'))
+  for(x in modalities){
+    # markers.mol <- markers[markers$cluster %in% c('MOL','OPC'),]
+    markers.mol <- markers[markers$cluster == 'MOL',]
+    markers.mol <- markers.mol[markers.mol$avg_log2FC > 0,]
+    markers.mol <- markers.mol[order(markers.mol$avg_log2FC,decreasing=TRUE),]
+    markers.mol <- markers.mol[markers.mol$p_val_adj < 0.05 ,]
+    markers.mol <- head(markers.mol,200)
+    
+    DefaultAssay(seurat) <- paste0('peaks_',x)
+    op <- findOverlaps(query = StringToGRanges(rownames(seurat)), StringToGRanges(markers.mol$gene))
+    
+    d <- GetAssayData(object = seurat,slot = 'data',assay = paste0('peaks_',x))  
+    heatmap.ls[[i]][[x]] <- d[unique(queryHits(op)),order(seurat$pt)]
+  }
+}
+
+
+H3K27me3.clusters.wave1.genes <- markers.mol[markers.mol$gene %in% rownames(heatmap.ls[['H3K27me3']][['H3K27me3']])[as.numeric(na.exclude(match(rownames(heatmap.ls[['H3K27me3']][['H3K27me3']]),names(a[a==2]))))],'closest_gene']
+H3K27me3.clusters.wave2.genes <- markers.mol[markers.mol$gene %in% rownames(heatmap.ls[['H3K27me3']][['H3K27me3']])[as.numeric(na.exclude(match(rownames(heatmap.ls[['H3K27me3']][['H3K27me3']]),names(a[a==1]))))],'closest_gene']
+
+
+ego1 <- enrichGO(gene          = H3K27me3.clusters.wave1.genes,
+                 universe      = rownames(seurat.ls[['H3K27me3']][['GA']]),
+                 OrgDb         = org.Mm.eg.db,
+                 keyType       = 'SYMBOL',
+                 ont           = "BP",
+                 pAdjustMethod = "BH",
+                 pvalueCutoff  = 0.05,
+                 qvalueCutoff  = 0.05,
+                 readable      = FALSE)
+
+ego2 <- enrichGO(gene          = H3K27me3.clusters.wave2.genes,
+                 universe      = rownames(seurat.ls[['H3K27me3']][['GA']]),
+                 OrgDb         = org.Mm.eg.db,
+                 keyType       = 'SYMBOL',
+                 ont           = "BP",
+                 pAdjustMethod = "BH",
+                 pvalueCutoff  = 0.05,
+                 qvalueCutoff  = 0.05,
+                 readable      = FALSE)
+
+# dotplot(ego1) No hits
+pdf('/data/proj/GCB_MB/bcd_CT/single-cell/results/figures/figure_5/Wave2_repression_GO_terms.pdf', width=5,height=5)
+dotplot(ego2)
+dev.off()
+```
+```{r, fig.width=15,fig.height=5}
+scRNA <- readRDS(file='/data/proj/GCB_MB/single-cell-CUT-Tag/nbiotech_paper/analysis/results/Sten_RNA/clustering/01.clustering_20000cells.Rds')
+scRNA.genes.scaled <- rownames(GetAssayData(object = scRNA,slot = 'scale.data',assay = 'RNA'))
+
+r        <- match(H3K27me3.clusters.wave1.genes,scRNA.genes.scaled)
+r        <- r[!is.na(r)]
+r        <- scRNA.genes.scaled[r]
+score.r  <- colMeans(GetAssayData(object = scRNA,slot = 'scale.data',assay = 'RNA')[r,])
+
+scRNA <- AddMetaData(object = scRNA,metadata = score.r,col.name='Wave1.score')
+####
+
+r        <- match(H3K27me3.clusters.wave2.genes,scRNA.genes.scaled)
+r        <- r[!is.na(r)]
+r        <- scRNA.genes.scaled[r]
+score.r  <- colMeans(GetAssayData(object = scRNA,slot = 'scale.data',assay = 'RNA')[r,])
+
+scRNA <- AddMetaData(object = scRNA,metadata = score.r,col.name='Wave2.score')
+
+
+p <- DimPlot(scRNA,group.by='TaxonomyRank3',label=TRUE,repel=TRUE,label.size = 4) + NoLegend()
+p3 <- FeaturePlot(scRNA,'Wave1.score',max.cutoff=quantile(scRNA$Wave1.score,0.90)) + scale_color_viridis() + ggtitle('Wave1 genes')
+p4 <- FeaturePlot(scRNA,'Wave2.score',max.cutoff=quantile(scRNA$Wave2.score,0.90)) + scale_color_viridis() + ggtitle('Wave2 genes')
+
+p | p3 | p4
+
+ggsave(plot= p|p3|p4, filename = '/data/proj/GCB_MB/bcd_CT/single-cell/results/figures/figure_5/gene_repression_scRNA.pdf',width=24,height=8)
+```
+

@@ -14,9 +14,13 @@ def get_filenames_from_url_txt(path):
 
 rule scATAC_all:
     input:
+        # Bing Ren's scATAC-seq
         'results/scATAC_bingren/seurat/Seurat_ATAC_clustered.Rds',
         'results/scATAC_bingren/seurat/Seurat_ATAC_fragments.bed.gz',
         # expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/integration/integrated_with_ATAC_{nfeatures}.Rds', modality = ['ATAC','H3K27ac'], feature = 'peaks', nfeatures = [1000,5000,10000,20000,40000,50000,75000,100000,125000]),
+
+        # 10x scATAC-seq
+        'results/scATAC_10x/download/8k_mouse_cortex_ATACv1p1_nextgem_Chromium_X_filtered_peak_bc_matrix.h5',
 
 
 ############################# Bing ren mouse brain
@@ -94,3 +98,14 @@ rule integrate_with_CT:
         '--reference_assay peaks --query_assay peaks '
         '--reference_fragments {input.ref_frag} --out {output.integrated} '
         '--reference_group MajorType --query_group seurat_clusters --downsample_features {wildcards.nfeatures}'
+
+rule download_10x_ATAC:
+    input:
+        script = workflow_dir + '/scripts/download_10x_scATAC.sh'
+    output:
+        h5matrix = 'results/scATAC_10x/download/8k_mouse_cortex_ATACv1p1_nextgem_Chromium_X_filtered_peak_bc_matrix.h5'
+    params:
+        folder   = 'results/scATAC_10x/download/'
+    shell:
+        'cd {params.folder}; '
+        'sh {input.script}'

@@ -12,6 +12,7 @@ rule all_multimodal:
         [expand('results/multiple_modalities/{combination}/seurat_multimodal/{feature}/Seurat_object.Rds', combination="_".join(combination), feature = ['peaks']) for combination in modalities_combinations],
         "results/multimodal_data/WNN/seurat/Seurat_object_WNN.Rds",
         "results/multimodal_data/WNN/seurat/pseudotime/Seurat_object_WNN_pseudotime.Rds",
+        expand('results/multiple_modalities/ATAC_H3K27ac_H3K27me3/seurat_multimodal/peaks/scvelo/{modalities}/Seurat_object_{clusters}.h5Seurat',modalities=['ATAC_H3K27ac','ATAC_H3K27me3','H3K27me3_H3K27ac'], clusters = ['all_clusters','OPC_MOL'])
 
 rule merged_multiple_modalities:
     input:
@@ -50,3 +51,19 @@ rule pseudotime_WNN:
         seurat = "results/multimodal_data/WNN/seurat/pseudotime/Seurat_object_WNN_pseudotime.Rds",
     shell:
         "Rscript {input.script} --seurat {input.seurat} --clusters OPC MOL --reduction wnn.umap --out {output.seurat}"
+
+rule convert_seurat_to_anndata:
+    input:
+        seurat =    'results/multiple_modalities/ATAC_H3K27ac_H3K27me3/seurat_multimodal/peaks/Seurat_object.Rds',
+        script =    workflow_dir + '/scripts/seurat_to_scvelo.R',
+        seurat_pt = 'results/multimodal_data/WNN/seurat/pseudotime/Seurat_object_WNN_pseudotime.Rds'
+    output:
+        seurat = 'results/multiple_modalities/ATAC_H3K27ac_H3K27me3/seurat_multimodal/peaks/scvelo/{modalities}/Seurat_object_{clusters}.h5Seurat',
+        h5ann  = 'results/multiple_modalities/ATAC_H3K27ac_H3K27me3/seurat_multimodal/peaks/scvelo/{modalities}/Seurat_object_{clusters}.h5ad'
+    params:
+        clusters   = lambda wildcards: '' if wildcards.clusters == 'all_clusters' else '-c ' + ' '.join(wildcards.clusters.split('_')) ,
+        idents     = 'idents_short',
+        modalities = lambda wildcards: ' '.join(wildcards.modalities.split('_')),
+        assay      = 'GA'
+    shell:
+        'Rscript {input.script} -i {input.seurat} -o {output.seurat} {params.clusters} -d {params.idents} -m {params.modalities} -a {params.assay} -t {input.seurat_pt}'

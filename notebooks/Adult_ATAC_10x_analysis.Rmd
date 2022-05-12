@@ -1,0 +1,20 @@
+---
+title: "scATAC 10x cortex analysis"
+output: html_notebook
+params:
+  out_prefix: "/data/proj/GCB_MB/bcd_CT/single-cell/results/"
+  modality: "ATAC"
+  feature: "peaks"
+  data_10x: "/data/proj/GCB_MB/bcd_CT/single-cell/results/scATAC_10x/download/"
+
+---
+```{r}
+library(Seurat)
+library(Signac)
+library(ggplot2)
+```
+
+```{r}
+seurat <- Seurat::Read10X(params$data_10x)
+```
+

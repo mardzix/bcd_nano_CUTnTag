@@ -24,6 +24,7 @@ rule all_single_modality:
     input:
         expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/integration/integration_RNA.Rds', modality = antibodies_list, feature = 'peaks'),
         expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/Seurat_object_clustered_renamed.Rds',modality = antibodies_list, feature = 'peaks'), # TODO: use 'peaks' as variable
+        expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/h5_export/Seurat_object.h5seurat', modality=antibodies_list, feature='peaks'),
         expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/bigwig/{idents}/', modality = antibodies_list, feature = 'peaks', idents = idents), # TODO: use 'peaks' and idents as variable
         expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/markers/{idents}/markers.csv', modality = antibodies_list, feature = 'peaks', idents = idents),
         expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/markers/{idents}/markers.bed', modality= antibodies_list, feature = 'peaks', idents = idents),
@@ -33,7 +34,8 @@ rule all_single_modality:
         # ['results/{sample}/{antibody}_{barcode}/bam/possorted_bam_sampleID.bam'.format(sample=sample,antibody=antibody,barcode=barcodes_dict[sample][antibody]) for sample in samples_list  for antibody in barcodes_dict[sample].keys()],
         expand('results/multimodal_data/single_modality/{modality}/bam/possorted_bam_sampleID.bam',modality = antibodies_list),
         expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/bam_per_cluster/{ident}/bam/',modality=antibodies_list,feature='peaks',ident = idents),
-        expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/bam_per_cluster/{ident}/bigwig/',modality=antibodies_list,feature='peaks',ident = idents),
+        expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/bam_per_cluster/{ident}/bigwig/', modality=antibodies_list,feature='peaks',ident = idents),
+
 
 
 
@@ -68,6 +70,15 @@ rule cluster_final_and_rename:
         "                                           integrated = '{params.out_prefix}{input.integrated}', "                # TODO - fix absolute paths integration                         
         "                                           output = '{params.out_prefix}{output.seurat}'))\" "
 
+
+rule export_h5:
+    input:
+        seurat = 'results/multimodal_data/single_modality/{modality}/seurat/{feature}/Seurat_object_clustered_renamed.Rds',
+        script = workflow_dir + '/scripts/seurat_export_h5.R'
+    output:
+        seurat = 'results/multimodal_data/single_modality/{modality}/seurat/{feature}/h5_export/Seurat_object.h5seurat'
+    shell:
+        'Rscript {input.script} --input {input.seurat} --output {output.seurat}'
 
 rule export_bw:
     input:
