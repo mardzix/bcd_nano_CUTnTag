@@ -17,3 +17,4 @@ curl -O https://cf.10xgenomics.com/samples/cell-atac/2.1.0/8k_mouse_cortex_ATACv
 curl -O https://cf.10xgenomics.com/samples/cell-atac/2.1.0/8k_mouse_cortex_ATACv1p1_nextgem_Chromium_X/8k_mouse_cortex_ATACv1p1_nextgem_Chromium_X_summary.json
 curl -O https://cf.10xgenomics.com/samples/cell-atac/2.1.0/8k_mouse_cortex_ATACv1p1_nextgem_Chromium_X/8k_mouse_cortex_ATACv1p1_nextgem_Chromium_X_web_summary.html
 curl -O https://cf.10xgenomics.com/samples/cell-atac/2.1.0/8k_mouse_cortex_ATACv1p1_nextgem_Chromium_X/8k_mouse_cortex_ATACv1p1_nextgem_Chromium_X_cloupe.cloupe
+curl -O https://signac-objects.s3.amazonaws.com/allen_brain.rds

@@ -16,6 +16,8 @@ dependencies:
   - conda-forge::pandoc
   - conda-forge::udunits2
   - conda-forge::gdal
+  - conda-forge::papermill
+  - r::rpy2
 #  - conda-forge::udunits2
 #  - conda-forge::gdal
 #  - bioconda::r-monocle3
@@ -43,3 +45,6 @@ dependencies:
 # devtools::install_github("cole-trapnell-lab/cicero-release", ref = "monocle3")
 # devtools::install_github("mardzix/SnapATAC", ref = 'change_rbind_error')
 # devtools::install_github("mojaveazure/seurat-disk")
+
+# python3 -m pip install papermill
+# pip install rpy2

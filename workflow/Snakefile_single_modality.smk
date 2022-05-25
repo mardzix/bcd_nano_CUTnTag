@@ -35,6 +35,7 @@ rule all_single_modality:
         expand('results/multimodal_data/single_modality/{modality}/bam/possorted_bam_sampleID.bam',modality = antibodies_list),
         expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/bam_per_cluster/{ident}/bam/',modality=antibodies_list,feature='peaks',ident = idents),
         expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/bam_per_cluster/{ident}/bigwig/', modality=antibodies_list,feature='peaks',ident = idents),
+        expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/bam_per_cluster/{ident}/peaks/', modality=antibodies_list,feature='peaks',ident = idents),
 
 
 
@@ -166,3 +167,12 @@ rule bam_to_bw_per_cluster:
     threads: 8
     shell:
         'sh {input.script} {input.bam} {output.bw} {threads}'
+
+rule bam_to_peaks_per_cluster:
+    input:
+        bam    = 'results/multimodal_data/single_modality/{modality}/seurat/{feature}/bam_per_cluster/{ident}/bam/',
+        script = workflow_dir + '/scripts/all_bam_to_peaks.sh'
+    output:
+        peaks  = directory('results/multimodal_data/single_modality/{modality}/seurat/{feature}/bam_per_cluster/{ident}/peaks/')
+    shell:
+        'sh {input.script}  {input.bam} {output.peaks}'
