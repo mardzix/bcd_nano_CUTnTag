@@ -15,7 +15,7 @@ parser$add_argument("-o", "--output", type="character", default='foo',
                     help="output csv file")
 parser$add_argument("-d", "--idents", type="character", default='active.ident',
                     help="identities to use for table")
-
+# parser$add_argument("-s", "--sample_id",type="character",default=) # TODO
 args <- parser$parse_args()
 
 ###################

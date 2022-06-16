@@ -3,7 +3,8 @@ title: "R Notebook"
 output: html_notebook
 params:
   nbiotech:   '/data/proj/GCB_MB/bcd_CT/single-cell/results/nbiotech_data/data/seurat/H3K27me3_seurat_object.Rds'
-  sequential: '/data/proj/GCB_MB/single-cell-CUT-Tag/sequential/mouse_brain/results/H3K27me3/clustering/01.clustering.Rds'
+  nano-CT: '/data/proj/GCB_MB/single-cell-CUT-Tag/nano-CT/mouse_brain/results/H3K27me3/clustering/01.clustering.Rds'
+  multimodal: '/data/proj/GCB_MB/bcd_CT/single-cell/results/multimodal_data/single_modality/H3K27me3/seurat/peaks/Seurat_object_clustered_renamed.Rds'
   out_folder: '/data/proj/GCB_MB/bcd_CT/single-cell/results/'
 ---
 
@@ -19,18 +20,18 @@ library(purrr)
 
 ```{r load_data}
 nbiotech    <- readRDS(file=params$nbiotech)
-sequential  <- readRDS(file=params$sequential)
+nano-CT  <- readRDS(file=params$nano-CT)
 
 nbiotech   <- RenameCells(object = nbiotech,add.cell.id = 'nbiotech')
-sequential <- RenameCells(object = sequential,add.cell.id = 'sequential')
+nano-CT <- RenameCells(object = nano-CT,add.cell.id = 'nano-CT')
 
 nbiotech$method       <- 'scCT'
-sequential$method     <- 'sequential'
+nano-CT$method     <- 'nano-CT'
 ```
 
-```{r Fig1e_plot_UMAP_sequential}
-p1 <- DimPlot(sequential) + NoLegend()
-p2 <- DimPlot(sequential,label=TRUE) + NoLegend()
+```{r Fig1e_plot_UMAP_nano-CT}
+p1 <- DimPlot(nano-CT) + NoLegend()
+p2 <- DimPlot(nano-CT,label=TRUE) + NoLegend()
 
 p3 <- DimPlot(nbiotech,group.by = 'cell_type') + NoLegend()
 p4 <- DimPlot(nbiotech,group.by = 'cell_type',label=TRUE) + NoLegend()
@@ -45,7 +46,7 @@ ggsave(plot = p3, filename = paste0(params$out_folder,'/figures/figure_1/UMAP_nb
 
 
 ```{r merge_UMAP,fig.width=6,fig.height=6}
-merged <- merge(nbiotech,sequential)
+merged <- merge(nbiotech,nano-CT)
 DefaultAssay(merged) <- 'bins_5000'
 
 
@@ -59,10 +60,10 @@ DimPlot(merged)
 
 ```{r figure_1f, fig.width=6,fig.height=3}
 p1 <- DimPlot(merged[,merged$method=='scCT'],label=TRUE,pt.size=0.2) + NoLegend()
-p2 <- DimPlot(merged[,merged$method=='sequential'],label=TRUE,pt.size=0.2) + NoLegend()
+p2 <- DimPlot(merged[,merged$method=='nano-CT'],label=TRUE,pt.size=0.2) + NoLegend()
 
 p3 <- DimPlot(merged[,merged$method=='scCT'],pt.size=0.2) + NoLegend()
-p4 <- DimPlot(merged[,merged$method=='sequential'],pt.size=0.2) + NoLegend()
+p4 <- DimPlot(merged[,merged$method=='nano-CT'],pt.size=0.2) + NoLegend()
 
 
 
@@ -74,8 +75,12 @@ dev.off()
 p2
 ```
 
-```{r Fig1d_UMI_plot}
+```{r Fig1d_UMI_plot,fig.width=6,fig.height=3}
+seurat.multi        <- readRDS(file=params$multimodal)
+seurat.multi$method <- 'nano-CT'
+
 levels(merged@active.ident)[1:13] <- sort(as.numeric(levels(merged@active.ident)[1:13]))
+
 p1 <- VlnPlot(object = merged,features = 'logUMI', split.by = 'method',pt.size = 0) + ggtitle("") + xlab("")
 p2 <- VlnPlot(object = merged,features = 'logUMI', split.by = 'method',pt.size = 0,group.by = 'method') + ggtitle("") + xlab("")
 
@@ -84,6 +89,12 @@ ggsave(plot = p2,paste0(params$out_folder,'/figures/figure_1/logUMI_plot2.pdf'),
 
 p1
 p2
+head(seurat.multi)
+head(merged@meta.data)
+df <- rbind(merged@meta.data[,c('sample','logUMI','method')],seurat.multi@meta.data[,c('sample','logUMI','method')])
+df$method[df$method==]
+
+ggplot(df) + geom_violin(aes(x=sample,y=logUMI,fill=method))
 ```
 
 
@@ -95,7 +106,7 @@ nbiotech.ls                     <- lapply(nbiotech.files, readRDS)
 nbiotech.same.peakcaller.merged <- purrr::reduce(nbiotech.ls,merge)
 
 
-frip.ls <- lapply(list(sequential,nbiotech.same.peakcaller.merged),function(x){x$peak_ratio_MB})
+frip.ls <- lapply(list(nano-CT,nbiotech.same.peakcaller.merged),function(x){x$peak_ratio_MB})
 names(frip.ls) <- c('nano-scCT','scCT')
 
 frip.ls <- lapply(names(frip.ls),function(x){frip.ls[[x]] <- as.data.frame(frip.ls[[x]]); colnames(frip.ls[[x]]) <- 'frip'; frip.ls[[x]]$method <- x; frip.ls[[x]]})
@@ -105,7 +116,7 @@ df.to.plot$method <- factor(df.to.plot$method,levels = unique(df.to.plot$method)
 
 p1 <- ggplot(data=df.to.plot,aes(x=method,y=frip)) + geom_violin(aes(fill=method)) + theme_bw() + xlab("") + ylab("Fraction of reads in peaks")  + theme(legend.title = element_blank()) + NoLegend()
 p1
-ggsave(filename = paste0(params$out_folder,'/figures/figure_1/frip_nbiotech_sequential.pdf'),width=2,height=2)
+ggsave(filename = paste0(params$out_folder,'/figures/figure_1/frip_nbiotech_nano-CT.pdf'),width=2,height=2)
 
 aggregate(x=df.to.plot$frip,by=list(df.to.plot$method),FUN=median)
 ```
@@ -123,7 +134,7 @@ ggsave(plot = p1,paste0(params$out_folder,'/figures/figure_1/UMAP_by_method.pdf'
 
 ```{r}
 markers.all <- FindAllMarkers(object = nbiotech,assay = 'bins_5000',min.pct = 0.05)
-markers.all.2 <- FindAllMarkers(object = sequential,assay = 'bins_5000',min.pct = 0.2)
+markers.all.2 <- FindAllMarkers(object = nano-CT,assay = 'bins_5000',min.pct = 0.2)
 
 library(dplyr)
 n=20
@@ -142,9 +153,9 @@ DefaultAssay(nbiotech) <- 'bins_5000'
 p1 <- Seurat::DoHeatmap(object = nbiotech,features = markers.top$gene,slot = 'data')  + scale_fill_viridis_c()
 p2 <- Seurat::DoHeatmap(object = nbiotech,features = markers.top.2$gene,slot = 'data')  + scale_fill_viridis_c()
 
-DefaultAssay(sequential) <- 'bins_5000'
-p3 <- Seurat::DoHeatmap(object = sequential, features = markers.top$gene,slot = 'data')  + scale_fill_viridis_c()
-p4 <- Seurat::DoHeatmap(object = sequential, features = markers.top.2$gene,slot = 'data')  + scale_fill_viridis_c()
+DefaultAssay(nano-CT) <- 'bins_5000'
+p3 <- Seurat::DoHeatmap(object = nano-CT, features = markers.top$gene,slot = 'data')  + scale_fill_viridis_c()
+p4 <- Seurat::DoHeatmap(object = nano-CT, features = markers.top.2$gene,slot = 'data')  + scale_fill_viridis_c()
 
 ggsave(plot=p1,filename = paste0(params$out_folder,'/figures/figure_1/markers_heatmap_1.pdf'),width=8,height=4)
 ggsave(plot=p4,filename = paste0(params$out_folder,'/figures/figure_1/markers_heatmap_2.pdf'),width=12,height=4)

@@ -48,3 +48,9 @@ dependencies:
 
 # python3 -m pip install papermill
 # pip install rpy2
+
+# Have seqtk in $PATH
+# https://github.com/lh3/seqtk
+
+# git clone https://github.com/lh3/seqtk.git;
+# cd seqtk; make

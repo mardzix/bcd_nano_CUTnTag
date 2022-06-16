@@ -36,7 +36,7 @@ rule all_single_modality:
         expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/bam_per_cluster/{ident}/bam/',modality=antibodies_list,feature='peaks',ident = idents),
         expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/bam_per_cluster/{ident}/bigwig/', modality=antibodies_list,feature='peaks',ident = idents),
         expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/bam_per_cluster/{ident}/peaks/', modality=antibodies_list,feature='peaks',ident = idents),
-
+        ['results/multimodal_data/{sample}/{modality}_{barcode}/clustering_{feature}/{idents}/bigwig/'.format(sample = sample,antibody = antibody,barcode = barcodes_dict[sample][antibody],modality = antibody,idents = ident,feature = f) for f in ['peaks'] for ident in idents for sample in samples_list  for antibody in barcodes_dict[sample].keys() ],
 
 
 
@@ -121,10 +121,19 @@ rule export_cluster_barcode_table:
 
 rule add_sampleID_to_bam:
     input:
-        bam = 'results/multimodal_data/{sample}/cellranger/{sample}_{antibody}_{barcode}/outs/possorted_bam.bam', \
+        bam = 'results/multimodal_data/{sample}/cellranger/{sample}_{antibody}_{barcode}/outs/possorted_bam.bam',
         script = workflow_dir + '/scripts/add_sampleID_to_bam.py'
     output:
         bam = temp('results/multimodal_data/{sample}/{antibody}_{barcode}/bam/possorted_bam_sampleID.bam'),
+    shell:
+        "python3 {input.script} {input.bam} {wildcards.sample} {output.bam}"
+
+rule add_sampleID_to_bam_temp2: # TODO - merge with previous rule during cleanup- downstream rule is export_bam_per_sample_and_cluster
+    input:
+        bam = 'results/multimodal_data/{sample}/cellranger/{sample}_{antibody}_{barcode}/outs/possorted_bam.bam',
+        script = workflow_dir + '/scripts/add_sampleID_to_bam.py'
+    output:
+        bam = 'results/multimodal_data/{sample}/{antibody}_{barcode}/bam/possorted_bam_sampleID2.bam',
     shell:
         "python3 {input.script} {input.bam} {wildcards.sample} {output.bam}"
 
@@ -158,6 +167,7 @@ rule export_bam_per_cluster:
     shell:
         "python3 {input.script} {input.bam} {input.table} NA {output.bam_files}"
 
+
 rule bam_to_bw_per_cluster:
     input:
         bam = 'results/multimodal_data/single_modality/{modality}/seurat/{feature}/bam_per_cluster/{ident}/bam/',
@@ -167,6 +177,30 @@ rule bam_to_bw_per_cluster:
     threads: 8
     shell:
         'sh {input.script} {input.bam} {output.bw} {threads}'
+
+rule export_bam_per_sample_and_cluster:
+    input:
+        csv = 'results/multimodal_data/single_modality/{modality}/seurat/{feature}/bam_per_cluster/{idents}/cluster_barcode_table.csv',
+        bam = 'results/multimodal_data/{sample}/{modality}_{barcode}/bam/possorted_bam_sampleID2.bam',
+        script= workflow_dir + '/scripts/filter_bam_by_barcode.py',
+    output:
+        csv_per_sample  = 'results/multimodal_data/{sample}/{modality}_{barcode}/clustering_{feature}/{idents}/cluster_barcode_table.csv',
+        bam_per_cluster = directory('results/multimodal_data/{sample}/{modality}_{barcode}/clustering_{feature}/{idents}/bam/')
+    shell:
+        'cat {input.csv} | grep {wildcards.sample} > {output.csv_per_sample}; '
+        'python3 {input.script} {input.bam} {output.csv_per_sample} NA {output.bam_per_cluster}'
+
+rule bam_to_bw_per_sample_and_cluster:
+    input:
+        bam = 'results/multimodal_data/{sample}/{modality}_{barcode}/clustering_{feature}/{idents}/bam/',
+        script = workflow_dir + '/scripts/all_bam_to_bw.sh'
+    output:
+        bw = directory('results/multimodal_data/{sample}/{modality}_{barcode}/clustering_{feature}/{idents}/bigwig/')
+    threads: 8
+    shell:
+        'sh {input.script} {input.bam} {output.bw} {threads}'
+
+
 
 rule bam_to_peaks_per_cluster:
     input:

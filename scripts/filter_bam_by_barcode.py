@@ -6,7 +6,7 @@ from contextlib import ExitStack
 
 
 bamFile             = sys.argv[1]      # Possorted bam file from 10x with barcodes           e.g. AAACGAAAGTTGCTTG-1
-barcode_annotations = sys.argv[2]      # cluster-barcode csv.                                e.g. mOL,H3K27ac_N1_AAACGAAAGTTGCTTG-1
+barcode_annotations = sys.argv[2]      # cluster-barcode csv table.
 barcode_prefix      = sys.argv[3]      # Sample name to prefix to bam barcode                e.g. mOL,H3K27ac_N1  (Use "NA" if no prefix is needed)
 out_prefix          = sys.argv[4]      # folder to write the output to                       e.g. /path/to/output
 

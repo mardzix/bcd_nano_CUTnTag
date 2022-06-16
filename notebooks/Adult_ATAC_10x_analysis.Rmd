@@ -5,16 +5,33 @@ params:
   out_prefix: "/data/proj/GCB_MB/bcd_CT/single-cell/results/"
   modality: "ATAC"
   feature: "peaks"
-  data_10x: "/data/proj/GCB_MB/bcd_CT/single-cell/results/scATAC_10x/download/"
+  data_10x: "/data/proj/GCB_MB/bcd_CT/single-cell/results/scATAC_10x/download/8k_mouse_cortex_ATACv1p1_nextgem_Chromium_X_filtered_peak_bc_matrix.h5"
+  metadata: "/data/proj/GCB_MB/bcd_CT/single-cell/results/scATAC_10x/download/8k_mouse_cortex_ATACv1p1_nextgem_Chromium_X_singlecell.csv"
+  fragments: "/data/proj/GCB_MB/bcd_CT/single-cell/results/scATAC_10x/download/8k_mouse_cortex_ATACv1p1_nextgem_Chromium_X_fragments.tsv.gz"
+  
+  
 
 ---
 ```{r}
 library(Seurat)
 library(Signac)
 library(ggplot2)
+library(hdf5r)
 ```
 
 ```{r}
-seurat <- Seurat::Read10X(params$data_10x)
+counts   <- Read10X_h5(params$data_10x)
+metadata <- read.csv(params$metadata)
+fragments <- params$fragments
+
+
+seurat <- CreateChromatinAssay(
+  counts = counts,
+  sep = c(":", "-"),
+  genome = 'mm10',
+  fragments = fragments
+)
+
+seurat <- readRDS(file='')
 ```
 
