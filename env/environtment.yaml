@@ -4,24 +4,28 @@ dependencies:
   - conda-forge::R=4.1
   - pyyaml
   - tbb=2020.2
-  - bioconda::bowtie2
-  - bioconda::macs2=2.2.7
+  - bioconda::bowtie2=2.3
+  - bioconda::macs2=2.2
   - bioconda::snakemake=5.15
   - bioconda::deeptools=3.5
   - bioconda::bedtools=2.30
   - bioconda::samtools=1.14
-  - bioconda::scvelo=0.2.4
   - bioconda::sra-tools
+  - bioconda::scrublet=0.2
   - conda-forge::htcondor
   - conda-forge::pandoc
+  - conda-forge::udunits2
+  - conda-forge::gdal
+  - conda-forge::papermill
+  - r::rpy2
 #  - conda-forge::udunits2
 #  - conda-forge::gdal
-  - bioconda::r-monocle3
+#  - bioconda::r-monocle3
 
 # Installing monocle3 is a nightmare
 
 # R packages
-# install.packages(c('argparse','ggplot2','funr','Signac','scales','Seurat','rmarkdown','mclust','GGally','BiocManager','patchwork','markdown','UpSetR','pheatmap','viridis','purrr','Rmagic','devtools'))
+# install.packages(c('argparse','ggplot2','funr','Signac','scales','Seurat','rmarkdown','mclust','GGally','BiocManager','patchwork','markdown','UpSetR','pheatmap','viridis','purrr','Rmagic','devtools','raster'))
 # BiocManager::install(c('ensembldb','EnsDb.Mmusculus.v79','GenomeInfoDb', 'GenomicRanges', 'IRanges', 'Rsamtools','BiocGenerics','rtracklayer','limma','slingshot'))
 
 
@@ -31,12 +35,22 @@ dependencies:
 #                       'limma', 'S4Vectors', 'SingleCellExperiment',
 #                       'SummarizedExperiment', 'batchelor', 'Matrix.utils'))
 
-# monocle3 dependencies
+# monocle3 dependencies - not sure if relevant
 # install.packages("udunits2",configure.args = c('--with-udunits2-include=/data/proj/GCB_MB/miniconda3/envs/bcdCT/include','--with-udunits2-lib=/data/proj/GCB_MB/miniconda3/envs/bcdCT/lib'))
 
 # install.packages("devtools")
 # devtools::install_github('cole-trapnell-lab/leidenbase')
 # devtools::install_github('cole-trapnell-lab/monocle3')
-
 # devtools::install_github('cole-trapnell-lab/monocle3', ref="develop")
 # devtools::install_github("cole-trapnell-lab/cicero-release", ref = "monocle3")
+# devtools::install_github("mardzix/SnapATAC", ref = 'change_rbind_error')
+# devtools::install_github("mojaveazure/seurat-disk")
+
+# python3 -m pip install papermill
+# pip install rpy2
+
+# Have seqtk in $PATH
+# https://github.com/lh3/seqtk
+
+# git clone https://github.com/lh3/seqtk.git;
+# cd seqtk; make

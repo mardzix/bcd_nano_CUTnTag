@@ -1,0 +1,80 @@
+---
+title: "R Notebook"
+output: html_notebook
+params:
+  out_prefix: "/data/proj/GCB_MB/bcd_CT/single-cell/results/"
+---
+
+```{r libraries}
+library(Seurat)
+library(Signac)
+library(ggplot2)
+library(dplyr)
+```
+
+
+```{r}
+dir.create(paste0(params$out_prefix,'/figures/figure_3/'),recursive = TRUE)
+```
+
+
+```{r}
+library(reticulate)
+library(ggplot2)
+library(ggrepel)
+library(RColorBrewer)
+
+
+np <- reticulate::import('numpy')
+
+m <- np$load(paste0(params$out_prefix,'/benchmarks/peaks/PCA_on_markers/idents_short/markers_matrix.npz'))
+
+
+m.prcomp <- prcomp(m[['matrix']],scale=TRUE)
+
+to.plot      <- as.data.frame(m.prcomp$rotation[,1:2] )
+to.plot$file <- m[['labels']]
+to.plot$exp  <-     c(rep('ATAC',15),rep('H3K27ac',28),rep('H3K27me3',24),rep('nibotech_H3K27ac',5),rep('nbiotech_H3K27me3',8))
+to.plot$modality <- c(rep('ATAC',15),rep('H3K27ac',28),rep('H3K27me3',24),rep('H3K27ac',5),rep('H3K27me3',8))
+to.plot$method <- c(rep('bcd-nano-CT',67),rep('scCT',13))
+
+colors <- brewer.pal(n = 6,name = 'Paired')
+
+ggplot(data = to.plot,aes(x=PC1,y=PC2, fill=exp, shape=method,col=exp)) + 
+  geom_point(size=5,col='black') +
+  theme_bw()  + scale_fill_manual(values = colors[c(2,4,6,5,3)]) + scale_shape_manual(values = c(24,21)) + theme(text = element_text(size=20))
+
+ggsave(file=paste0(params$out_prefix,'/figures/figure_3/PCA_clusters.pdf'),width=8,height=5)
+
+```
+
+
+
+
+```{r}
+library(GGally)
+library(ggthemes)
+
+np <- reticulate::import('numpy')
+m.np <- np$load(paste0(params$out_prefix, '/benchmarks/peaks/specificity_benchmark/peaks_matrix.npz'))
+
+m <- m.np[['matrix']]
+colnames(m) <- m.np[['labels']]
+m <- as.data.frame(m)
+
+colnames(m) <- c('nbiot_ac',
+                 'nbiot_me3',
+                 'bcd_ac_1',
+                 'bcd_ac_2',
+                 'bcd_me3_1',
+                 'bcd_me3_2')
+
+m <- m[,c(1,3,4,2,5,6)]
+
+cor(m)
+
+ggpairs(data=m,lower=NULL,upper = list(continuous = wrap("points",size=0.02)),diag=NULL) + theme_minimal()
+ggsave(file=paste0(params$out_prefix,'/figures/figure_3/correlation_scatter.png'),width=10,height=10)
+
+
+```

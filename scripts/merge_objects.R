@@ -18,7 +18,9 @@ args <- parser$parse_args()
 
 # Load the data
 seurat.ls <- lapply(args$input,function(x){
-  readRDS(file=x)
+  seurat <- readRDS(file=x)
+  seurat$orig_file <- x
+  return(seurat)
 })
 
 # Functions

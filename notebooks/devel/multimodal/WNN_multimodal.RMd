@@ -1,0 +1,162 @@
+---
+title: "R Notebook"
+output: html_notebook
+params:
+  out_prefix: "/data/proj/GCB_MB/bcd_CT/single-cell/results/"
+  seurat: "/data/proj/GCB_MB/bcd_CT/single-cell/results/multiple_modalities/ATAC_H3K27ac_H3K27me3/seurat_multimodal/peaks/Seurat_object.Rds"
+  output: "/data/proj/GCB_MB/bcd_CT/single-cell/results/multiple_modalities/WNN/seurat/Seurat_object_WNN.Rds""
+---
+
+
+```{r}
+library(Seurat)
+library(Signac)
+library(ggplot2)
+library(dplyr)
+set.seed(1234)
+
+```
+
+```{r, fig.width=12,fig.height=4}
+seurat <- readRDS(file=params$seurat)
+
+p1 <- DimPlot(seurat[[1]],label=TRUE) + NoLegend() + ggtitle(unique(seurat[[1]]$modality))
+p2 <- DimPlot(seurat[[2]],label=TRUE) + NoLegend() + ggtitle(unique(seurat[[2]]$modality))
+p3 <- DimPlot(seurat[[3]],label=TRUE) + NoLegend() + ggtitle(unique(seurat[[3]]$modality))
+p1+p2+p3
+```
+
+
+```{r}
+common.cells <- Cells(seurat[[4]])
+
+modalities <- names(seurat)
+modalities <- modalities[modalities!='merged']
+
+for(x in modalities){
+  seurat[[x]] <- seurat[[x]][,common.cells]
+  seurat[['merged']][[paste0('peaks_',x)]] <- seurat[[x]][['peaks']]
+  seurat[['merged']][[paste0('GA_',x)]] <- seurat[[x]][['GA']]
+}
+
+seurat.wnn <- seurat[['merged']]
+
+for(x in modalities){
+  DefaultAssay(seurat.wnn) <- paste0('peaks_',x)
+  seurat.wnn <- RunTFIDF(seurat.wnn) %>% FindTopFeatures() %>% RunSVD(reduction.name = paste0(x,'_lsi'))
+}
+```
+
+
+```{r}
+seurat.wnn <- FindMultiModalNeighbors(
+  seurat.wnn, reduction.list = list("ATAC_lsi","H3K27ac_lsi", "H3K27me3_lsi"), 
+  dims.list = list(2:40,2:40, 2:40), modality.weight.name = "histone.weight",k.nn = 5
+)
+
+seurat.wnn <- RunUMAP(seurat.wnn, nn.name = "weighted.nn", reduction.name = "wnn.umap", reduction.key = "wnnUMAP_")
+seurat.wnn <- FindClusters(seurat.wnn, graph.name = "wsnn", algorithm = 3, resolution = 0.8, verbose = FALSE)
+
+DimPlot(seurat.wnn,label=TRUE)
+FeaturePlot(seurat.wnn,'peaks_ATAC.weight',min.cutoff = 0.2,max.cutoff = 0.6) + scale_color_viridis_c()
+FeaturePlot(seurat.wnn,'peaks_H3K27ac.weight',min.cutoff = 0.2,max.cutoff = 0.6) + scale_color_viridis_c()
+FeaturePlot(seurat.wnn,'peaks_H3K27me3.weight',min.cutoff = 0.2,max.cutoff = 0.6) + scale_color_viridis_c()
+
+ggplot(data=reshape2::melt(data.frame('weight_ATAC' = seurat.wnn$peaks_ATAC.weight,
+                                      'weight_H3K27ac' = seurat.wnn$peaks_H3K27ac.weight,
+                                      'weight_H3K27me3' = seurat.wnn$peaks_H3K27me3.weight))) + 
+  geom_boxplot(aes(x= variable,y=value))
+```
+
+
+```{r, fig.width=15,fig.height=15}
+for(x in modalities){
+  for(y in modalities){
+    seurat[[y]] <- AddMetaData(seurat[[y]],seurat[[x]]$idents_short,col.name = paste0('idents_short_',x))
+  }
+}
+
+p<- list()
+for(y in modalities)
+  for(x in modalities){
+    p[[y]][[x]] <- DimPlot(seurat[[y]],label=TRUE,repel=TRUE,group.by=paste0('idents_short_',x)) + NoLegend()
+  }
+
+p <- purrr::reduce(p,c)
+library(gridExtra)
+do.call('grid.arrange',p)
+```
+
+
+
+
+```{r,fig.width=20,fig.height=5}
+seurat.wnn <- AddMetaData(seurat.wnn,seurat[['ATAC']]$idents_short,col.name = 'ATAC_cluster_idents')
+p1 <- DimPlot(seurat.wnn,group.by='ATAC_cluster_idents',label=TRUE,repel=TRUE) + NoLegend()
+
+seurat.wnn <- AddMetaData(seurat.wnn,seurat[['H3K27ac']]$idents_short,col.name = 'H3K27ac_cluster_idents')
+p2 <- DimPlot(seurat.wnn,group.by='H3K27ac_cluster_idents',label=TRUE,repel=TRUE) + NoLegend()
+
+seurat.wnn <- AddMetaData(seurat.wnn,seurat[['H3K27me3']]$idents_short,col.name = 'H3K27me3_cluster_idents')
+p3 <- DimPlot(seurat.wnn,group.by='H3K27me3_cluster_idents',label=TRUE,repel=TRUE) + NoLegend()
+
+p4 <- DimPlot(seurat.wnn,group.by = 'seurat_clusters', label=TRUE,repel=TRUE) + NoLegend()
+
+grid.arrange(p1,p2,p3,p4,nrow=1)
+```
+
+
+`
+```{r}
+VlnPlot(seurat.wnn, features = "peaks_H3K27ac.weight", sort = TRUE, pt.size = 0.1,group.by="H3K27me3.idents_L1")  + NoLegend()
+VlnPlot(seurat.wnn, features = "peaks_H3K27me3.weight", sort = TRUE, pt.size = 0.1,group.by="H3K27me3.idents_L1")  + NoLegend() 
+VlnPlot(seurat.wnn, features = "peaks_ATAC.weight", sort = TRUE, pt.size = 0.1,group.by="H3K27me3.idents_L1")   + NoLegend()
+
+VlnPlot(seurat.wnn, features = "peaks_H3K27ac.weight", sort = TRUE, pt.size = 0.1,group.by="H3K27ac.idents_short")  + NoLegend()
+VlnPlot(seurat.wnn, features = "peaks_H3K27me3.weight", sort = TRUE, pt.size = 0.1,group.by="H3K27ac.idents_short")  + NoLegend() 
+VlnPlot(seurat.wnn, features = "peaks_ATAC.weight", sort = TRUE, pt.size = 0.1,group.by="H3K27ac.idents_short")   + NoLegend()
+
+
+```
+
+```{r,fig.width=12,fig.height=6}
+wnn.idents <- seurat.wnn@active.ident
+
+seurat[1:3] <- lapply(seurat[1:3],function(x){
+  AddMetaData(x,wnn.idents,col.name = 'wnn.idents')
+})
+
+lapply(seurat[1:3],function(x){
+  p1 <- DimPlot(x,group.by='idents_short',label=TRUE,repel=TRUE) + NoLegend()
+  p2 <- DimPlot(x,group.by = 'wnn.idents',label=TRUE,repel=TRUE) + NoLegend()
+  p1+p2
+})
+```
+
+```{r export}
+saveRDS(object = seurat.wnn,file = params$output)
+```
+
+
+```{r nownn}
+seurat.nownn <- readRDS(file=params$seurat.nownn)
+
+DefaultAssay(seurat.nownn[['merged']]) <- 'peaks'
+seurat.nownn[['merged']] <- seurat.nownn[['merged']] %>% RunTFIDF() %>% FindTopFeatures() %>% RunSVD() 
+
+seurat.nownn[['merged']] <- RunUMAP(object = seurat.nownn[['merged']], dims=2:50,reduction = 'lsi')
+seurat.nownn[['merged']] <- FindNeighbors(seurat.nownn[['merged']],reduction = 'lsi',dims = 2:50) %>% FindClusters()
+
+DimPlot(seurat.nownn[['merged']],label=TRUE) + NoLegend()
+
+
+for(x in modalities){
+  seurat.nownn[['merged']] <- AddMetaData(seurat.nownn[['merged']],metadata = seurat.nownn[[x]]$idents_short,col.name = paste0(x,'_idents_short'))
+}
+
+DimPlot(seurat.nownn[['merged']],label=TRUE) + NoLegend()
+lapply(modalities,function(x){
+  DimPlot(seurat.nownn[['merged']],group.by=paste0(x,'_idents_short'),label=TRUE,repel=TRUE) + NoLegend()
+})
+
+```

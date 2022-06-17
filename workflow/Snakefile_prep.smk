@@ -27,7 +27,7 @@ modalities_combinations = [list(x) for x in list(set(itertools.chain(*modalities
 # [('H3K27ac', 'H3K27me3'), ('ATAC', 'H3K27me3'), ('ATAC', 'H3K27ac')]
 
 # Define features
-features = ['peaks'] + ['bin_' + str(x) for x in config['general']['binwidth']]
+features = ['peaks'] # + ['bin_' + str(x) for x in config['general']['binwidth']]
 # print(features)
 # ['peaks', 'bin_5000', 'bin_10000', 'bin_25000', 'bin_50000', 'bin_100000']
 

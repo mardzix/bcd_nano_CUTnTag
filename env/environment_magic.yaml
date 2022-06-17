@@ -1,0 +1,5 @@
+name: bcdCT_magic
+dependencies:
+  - python
+  - conda-forge::R
+  - hcc::magic
