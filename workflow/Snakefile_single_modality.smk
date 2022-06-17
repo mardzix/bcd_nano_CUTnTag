@@ -101,6 +101,17 @@ rule find_markers:
     shell:
         "Rscript {input.script} -i {input.seurat} -o {output.markers} --idents {wildcards.idents}"
 
+rule markers_csv_to_bed:
+    input:
+        csv    = 'results/multimodal_data/single_modality/{modality}/seurat/{feature}/markers/{idents}/{markers}.csv',
+        script = workflow_dir + '/scripts/markers_to_bed.R'
+    output:
+        bed = 'results/multimodal_data/single_modality/{modality}/seurat/{feature}/markers/{idents}/{markers}.bed',
+    params:
+        nmarkers = 50
+    shell:
+        'Rscript {input.script} --input {input.csv} --nmarkers {params.nmarkers} --output {output.bed}'
+
 rule find_L3_markers:
     input:
         seurat = 'results/multimodal_data/single_modality/{modality}/seurat/{feature}/Seurat_object_clustered_renamed.Rds',

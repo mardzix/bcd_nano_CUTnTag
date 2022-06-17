@@ -8,7 +8,7 @@ set.seed(1234)
 parser <- ArgumentParser()
 parser$add_argument("--input", type="character",
                     help="Path to the markers csv file")
-parser$add_argument("--nmarkers", type="integer",
+parser$add_argument("--nmarkers", type="integer", default=200,
                     help="Number of top marker regions to export")
 parser$add_argument("--output", type="character",
                     help="Output bed file")
