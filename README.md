@@ -11,8 +11,7 @@ bioRxiv 2022.03.08.483459; doi: https://doi.org/10.1101/2022.03.08.483459
 Processed files - Seurat objects, fragments file (cellranger), bigwig tracks per cluster and .h5 matrices are available as supplementary files in the GEO repository
 https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE198467
 
-# 
-# 
+
 # Reproducing the analysis
 ## Step1: prepare environment
 ### conda environment is provided in env/environment.yaml
