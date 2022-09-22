@@ -1,5 +1,5 @@
 include: "Snakefile_preprocess.smk"
-include: "Snakefile_pre_nbiotech.smk"
+# include: "Snakefile_pre_nbiotech.smk"
 
 idents = ['idents_L1','idents_L2','idents_L3','seurat_clusters','idents_short']
 
@@ -22,6 +22,7 @@ def get_seurat_per_modality(modality, barcodes_dict,feature):
 
 rule all_single_modality:
     input:
+        expand('results/multimodal_data/single_modality/{modality}/bam/possorted_bam_sampleID.bw', modality = ['H3K27me3']),
         expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/integration/integration_RNA.Rds', modality = antibodies_list, feature = 'peaks'),
         expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/Seurat_object_clustered_renamed.Rds',modality = antibodies_list, feature = 'peaks'), # TODO: use 'peaks' as variable
         expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/h5_export/Seurat_object.h5seurat', modality=antibodies_list, feature='peaks'),
@@ -124,19 +125,9 @@ rule add_sampleID_to_bam:
         bam = 'results/multimodal_data/{sample}/cellranger/{sample}_{antibody}_{barcode}/outs/possorted_bam.bam',
         script = workflow_dir + '/scripts/add_sampleID_to_bam.py'
     output:
-        bam = temp('results/multimodal_data/{sample}/{antibody}_{barcode}/bam/possorted_bam_sampleID.bam'),
+        bam = 'results/multimodal_data/{sample}/{antibody}_{barcode}/bam/possorted_bam_sampleID.bam',
     shell:
         "python3 {input.script} {input.bam} {wildcards.sample} {output.bam}"
-
-rule add_sampleID_to_bam_temp2: # TODO - merge with previous rule during cleanup- downstream rule is export_bam_per_sample_and_cluster
-    input:
-        bam = 'results/multimodal_data/{sample}/cellranger/{sample}_{antibody}_{barcode}/outs/possorted_bam.bam',
-        script = workflow_dir + '/scripts/add_sampleID_to_bam.py'
-    output:
-        bam = 'results/multimodal_data/{sample}/{antibody}_{barcode}/bam/possorted_bam_sampleID2.bam',
-    shell:
-        "python3 {input.script} {input.bam} {wildcards.sample} {output.bam}"
-
 
 def get_bamfiles_per_modality(modality, barcodes_dict):
     bam_files = []
@@ -156,6 +147,17 @@ rule merge_bam_accross_samples:
     threads: 8
     shell:
         "samtools merge -@ {threads} {output.bam} {input.bam}"
+
+rule bam_to_bw_merged:
+    input:
+        bam = 'results/multimodal_data/single_modality/{modality}/bam/possorted_bam_sampleID.bam',
+    output:
+        bw = 'results/multimodal_data/single_modality/{modality}/bam/possorted_bam_sampleID.bw',
+    threads: 8
+    shell:
+        'samtools index {input.bam}; '
+        'bamCoverage -b {input.bam} -o {output.bw} -p {threads} --normalizeUsing RPKM'
+
 
 rule export_bam_per_cluster:
     input:
@@ -181,7 +183,7 @@ rule bam_to_bw_per_cluster:
 rule export_bam_per_sample_and_cluster:
     input:
         csv = 'results/multimodal_data/single_modality/{modality}/seurat/{feature}/bam_per_cluster/{idents}/cluster_barcode_table.csv',
-        bam = 'results/multimodal_data/{sample}/{modality}_{barcode}/bam/possorted_bam_sampleID2.bam',
+        bam = 'results/multimodal_data/{sample}/{modality}_{barcode}/bam/possorted_bam_sampleID.bam',
         script= workflow_dir + '/scripts/filter_bam_by_barcode.py',
     output:
         csv_per_sample  = 'results/multimodal_data/{sample}/{modality}_{barcode}/clustering_{feature}/{idents}/cluster_barcode_table.csv',

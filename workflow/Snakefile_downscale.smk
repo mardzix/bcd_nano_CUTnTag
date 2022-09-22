@@ -19,11 +19,6 @@ def get_sample_id_from_fastq(prefix):
 
 rule all:
     input:
-        # Downscale fastq
-        # 'results/downscale/summary.txt',
-       #  ['results/downscale/fastq_nbiotech/{antibody}/{sample}/{fastq}'.format(antibody='H3K27me3',sample=sample,fastq = f) for sample in ['H3K27me3_N1','H3K27me3_N2','H3K27me3_N3','H3K27me3_N4'] for f in get_fastq_basename_for_sample(sample,prefix = 'results/nbiotech_data/cellranger/fastq_final/')],
-        #['results/downscale/fastq_nano_CT/{antibody}/{sample}/{fastq}'.format(antibody='H3K27me3',sample=sample,fastq=f) for sample in ['bcdCT_MB21_02','bcdCT_MB21_03','bcdCT_MB21_04','bcdCT_MB21_05'] for f in get_fastq_basename_for_sample(sample, prefix= 'results/multimodal_data/') ],
-        # expand('results/downscale/fastq_nbiotech/{antibody}/{sample}/', antibody = 'H3K27me3' , sample = ['H3K27me3_N1','H3K27me3_N2','H3K27me3_N3','H3K27me3_N4']),
         # Cellranger
         # ['results/downscale/cellranger/{antibody}/nbiotech/{sample}/{fastq}.log'.format(antibody='H3K27me3',sample=sample,fastq=f) for sample in ['H3K27me3_N1', 'H3K27me3_N2', 'H3K27me3_N3','H3K27me3_N4'] for f in get_fastq_basename_for_sample(sample, prefix = 'results/nbiotech_data/cellranger/fastq_final/')],
         expand('results/downscale/cellranger/H3K27me3/nbiotech/{sample}/outs/possorted_bam.bam',sample = ['H3K27me3_N1','H3K27me3_N2','H3K27me3_N3','H3K27me3_N4']),
@@ -97,7 +92,7 @@ rule cellranger_nano:
         samples        = lambda wildcards: get_sample_id_from_fastq(os.getcwd() + '/results/multimodal_data/{sample}/fastq_per_barcode/{antibody}_*/barcode_*/'.format(antibody=wildcards.antibody,sample=wildcards.sample))
     threads: 40
     shell:
-        'rm -r {params.out_folder}/{wildcards.sample}; '
+        'rm -rf {params.out_folder}/{wildcards.sample}; '
         'mkdir {params.out_folder}; '
         'cd {params.out_folder}; '
         '/data/bin/cellranger-atac count --id {wildcards.sample} --reference {params.cellranger_ref} --fastqs {params.fastq_folder} --sample {params.samples}'

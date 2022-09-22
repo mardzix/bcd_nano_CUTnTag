@@ -322,8 +322,9 @@ cm.list <- lapply(identities, function(ident){
 ```
 
 ```{r Extended_figure_4b_UMI_multimodal_vs_nbiotech}
-nbiotech.samples <- c(paste0("H3K27me3_N",c(1,2,3,4)),paste0("H3K27ac_N",c(1,2)))
-nbiotech.files   <- paste0(params$out_prefix,'/nbiotech_data/',nbiotech.samples,'/seurat/bin_5000/Seurat_object.Rds')
+nbiotech.samples <- c('H3K27me3','H3K27ac')
+nbiotech.files   <- c(list.files(paste0(params$out_prefix,'/nbiotech_data/data/seurat/'),pattern = "*H3K27ac*",full.names = TRUE),
+                      list.files(paste0(params$out_prefix,'/nbiotech_data/data/seurat/'),pattern = "*H3K27me3*",full.names = TRUE))
 
 nbiotech.ls                     <- lapply(nbiotech.files, readRDS)
 nbiotech.logUMI.ls <- lapply(nbiotech.ls,function(x){x$logUMI})
@@ -354,8 +355,9 @@ nbiotech.samples <- c(paste0("H3K27me3_N",c(1,2,3,4)),paste0("H3K27ac_N",c(1,2))
 nbiotech.files   <- paste0(params$out_prefix,'/nbiotech_data/',nbiotech.samples,'/seurat/bin_5000/Seurat_object.Rds')
 
 nbiotech.ls                     <- lapply(nbiotech.files, readRDS)
-nbiotech.FRIP.ls <- lapply(nbiotech.ls,function(x){x$peak_ratio_MB})
-names(nbiotech.FRIP.ls) <- nbiotech.samples
+nbiotech.FRIP.ls                <- lapply(nbiotech.ls,function(x){x$peak_ratio_MB})
+names(nbiotech.FRIP.ls)         <- nbiotech.samples
+
 
 multimodal <- paste0(params$out_prefix,'/multiple_modalities/H3K27ac_H3K27me3/seurat_multimodal/peaks/Seurat_object.Rds')
 multimodal <- readRDS(multimodal)
@@ -375,6 +377,40 @@ p1
 
 ggsave(plot = p1, filename = paste0(params$out_prefix,'/figures/figure_2/FRIP_multimodal_vs_scCUTnTag.pdf'),width=8,height=4)
 ```
+```{r}
+nbiotech.modalities <- c('H3K27me3','H3K27ac')
+nbiotech.files   <- c(list.files(paste0(params$out_prefix,'/nbiotech_data/data/seurat/'),pattern = "*H3K27ac*",full.names = TRUE),
+                      list.files(paste0(params$out_prefix,'/nbiotech_data/data/seurat/'),pattern = "*H3K27me3*",full.names = TRUE))
+multimodal <- paste0(params$out_prefix,'/multiple_modalities/H3K27ac_H3K27me3/seurat_multimodal/peaks/Seurat_object.Rds')
+nbiotech.ls                     <- lapply(nbiotech.files, readRDS)
+multimodal <- readRDS(multimodal)
+modalities.names <- names(multimodal)
+
+summary.nano.ls <- lapply(1:2,function(x){
+  data.frame('sample' = multimodal[[x]]$sample, 'antibody' = modalities.names[x], 'frip' = multimodal[[x]]$peak_ratio_MB,'logUMI' = multimodal[[x]]$logUMI)
+})
+
+summary.nbiotech.ls <- lapply(nbiotech.ls, function(x){
+  data.frame('sample' = x$sample, 'antibody' = x$antibody, 'frip' = x$peak_ratio_MB,'logUMI' = x$logUMI)
+})
+
+summary.df <- do.call('rbind', c(summary.nano.ls,summary.nbiotech.ls))
+
+ggplot(data = summary.df, aes(x=sample,fill=antibody,y=frip)) + geom_violin() + theme_bw() + scale_fill_brewer(palette = 'Set1') 
+ggsave(filename = paste0(params$out_prefix,'/figures/figure_2/FRIP_multimodal_vs_scCUTnTag_NEW.pdf'),width=8,height=4) 
+
+ggplot(data=summary.df, aes(x=sample,fill=antibody,y=logUMI)) + geom_violin() + theme_bw() + scale_fill_brewer(palette = 'Set1')
+ggsave(filename = paste0(params$out_prefix,'/figures/figure_2/LogUMI_multimodal_vs_scCUTnTag_NEW.pdf'),width=8,height=4)
+
+aggregate(summary.df$frip,by=list(summary.df$sample, summary.df$antibody),FUN=median)
+aggregate(summary.df$logUMI, by = list(summary.df$sample,summary.df$antibody),FUN=median)
+```
+
+```{r}
+DimPlot(nbiotech.ls[[2]])
+
+```
+
 ```{r H3K27ac_markers_currated, fig.width=15,fig.height=15}
 library(dplyr)
 library(gridExtra)

@@ -13,7 +13,7 @@ https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE198467
 
 
 # Reproducing the analysis
-## Step1: prepare environment
+## Step 1: prepare environment
 ### conda environment is provided in env/environment.yaml
 ```angular2html
 conda env create -f env/environment.yaml
@@ -30,9 +30,9 @@ BiocManager::install(c('ensembldb','EnsDb.Mmusculus.v79','GenomeInfoDb', 'Genomi
 https://github.com/lh3/seqtk
 
 ### Install papermill for cli for jupyter notebooks
-python3 -m pip install papermill
+```python3 -m pip install papermill```
 
-## Step2: Download the data
+## Step 2: Download the data
 use fasterq-dump or alternative to download the fastq files
 
 ```https://github.com/ncbi/sra-tools/wiki/HowTo:-fasterq-dump```
@@ -42,12 +42,12 @@ GEO repository
 https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE198467
 
 
-## Step3: Clone the github repo with analysis code
+## Step 3: Clone the github repo with analysis code
 ```
 git clone https://github.com/mardzix/bcd_nano_CUTnTag
 ```
 
-## Step4: Modify config
+## Step 4: Modify config
 Change config/config.yaml and specify path to
 1. Absolute path to fastq files
 2. Specific path to the tmp folder  (Create any folder, e.g. in home) 
@@ -55,12 +55,16 @@ Change config/config.yaml and specify path to
 4. Modify path to cellranger reference
 
 
-## Step5:  Run the pipeline
-Pipeline is implemented in workflow management software - snakemake 
+## Step 5:  Run the pipeline
+Pipeline is implemented in workflow management software Snakemake 
 
-Change the cluster profile to the specific cluster profile (e.g. slurm etc.)
+Change the cluster-specific profile to your preference (e.g. slurm, condor etc.), or run without profile
 
-see more details here: https://github.com/Snakemake-Profiles/slurm
+For some example profiles see: 
+- https://snakemake.readthedocs.io/en/stable/executing/cli.html#profiles
+- https://github.com/Snakemake-Profiles/slurm
+
+- https://github.com/Snakemake-Profiles/htcondor
 ```
 snakemake --snakefile code/workflow/Snakefile_single_modality.smk  --cores 16 --profile htcondor -p                                                                              
 ```

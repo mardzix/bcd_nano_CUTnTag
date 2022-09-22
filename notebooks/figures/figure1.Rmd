@@ -3,7 +3,7 @@ title: "R Notebook"
 output: html_notebook
 params:
   nbiotech:   '/data/proj/GCB_MB/bcd_CT/single-cell/results/nbiotech_data/data/seurat/H3K27me3_seurat_object.Rds'
-  nano-CT: '/data/proj/GCB_MB/single-cell-CUT-Tag/nano-CT/mouse_brain/results/H3K27me3/clustering/01.clustering.Rds'
+  nano_CT: '/data/proj/GCB_MB/single-cell-CUT-Tag/sequential/mouse_brain/results/H3K27me3/clustering/01.clustering.Rds'
   multimodal: '/data/proj/GCB_MB/bcd_CT/single-cell/results/multimodal_data/single_modality/H3K27me3/seurat/peaks/Seurat_object_clustered_renamed.Rds'
   out_folder: '/data/proj/GCB_MB/bcd_CT/single-cell/results/'
 ---
@@ -20,18 +20,18 @@ library(purrr)
 
 ```{r load_data}
 nbiotech    <- readRDS(file=params$nbiotech)
-nano-CT  <- readRDS(file=params$nano-CT)
+nano_CT  <- readRDS(file=params$nano_CT)
 
 nbiotech   <- RenameCells(object = nbiotech,add.cell.id = 'nbiotech')
-nano-CT <- RenameCells(object = nano-CT,add.cell.id = 'nano-CT')
+nano_CT <- RenameCells(object = nano_CT,add.cell.id = 'nano_CT')
 
 nbiotech$method       <- 'scCT'
-nano-CT$method     <- 'nano-CT'
+nano_CT$method     <- 'nano_CT'
 ```
 
-```{r Fig1e_plot_UMAP_nano-CT}
-p1 <- DimPlot(nano-CT) + NoLegend()
-p2 <- DimPlot(nano-CT,label=TRUE) + NoLegend()
+```{r Fig1e_plot_UMAP_nano_CT}
+p1 <- DimPlot(nano_CT) + NoLegend()
+p2 <- DimPlot(nano_CT,label=TRUE) + NoLegend()
 
 p3 <- DimPlot(nbiotech,group.by = 'cell_type') + NoLegend()
 p4 <- DimPlot(nbiotech,group.by = 'cell_type',label=TRUE) + NoLegend()
@@ -46,7 +46,7 @@ ggsave(plot = p3, filename = paste0(params$out_folder,'/figures/figure_1/UMAP_nb
 
 
 ```{r merge_UMAP,fig.width=6,fig.height=6}
-merged <- merge(nbiotech,nano-CT)
+merged <- merge(nbiotech,nano_CT)
 DefaultAssay(merged) <- 'bins_5000'
 
 
@@ -60,10 +60,10 @@ DimPlot(merged)
 
 ```{r figure_1f, fig.width=6,fig.height=3}
 p1 <- DimPlot(merged[,merged$method=='scCT'],label=TRUE,pt.size=0.2) + NoLegend()
-p2 <- DimPlot(merged[,merged$method=='nano-CT'],label=TRUE,pt.size=0.2) + NoLegend()
+p2 <- DimPlot(merged[,merged$method=='nano_CT'],label=TRUE,pt.size=0.2) + NoLegend()
 
 p3 <- DimPlot(merged[,merged$method=='scCT'],pt.size=0.2) + NoLegend()
-p4 <- DimPlot(merged[,merged$method=='nano-CT'],pt.size=0.2) + NoLegend()
+p4 <- DimPlot(merged[,merged$method=='nano_CT'],pt.size=0.2) + NoLegend()
 
 
 
@@ -77,7 +77,7 @@ p2
 
 ```{r Fig1d_UMI_plot,fig.width=6,fig.height=3}
 seurat.multi        <- readRDS(file=params$multimodal)
-seurat.multi$method <- 'nano-CT'
+seurat.multi$method <- 'nano_CT'
 
 levels(merged@active.ident)[1:13] <- sort(as.numeric(levels(merged@active.ident)[1:13]))
 
@@ -92,7 +92,7 @@ p2
 head(seurat.multi)
 head(merged@meta.data)
 df <- rbind(merged@meta.data[,c('sample','logUMI','method')],seurat.multi@meta.data[,c('sample','logUMI','method')])
-df$method[df$method==]
+# df$method[df$method==]
 
 ggplot(df) + geom_violin(aes(x=sample,y=logUMI,fill=method))
 ```
@@ -106,7 +106,7 @@ nbiotech.ls                     <- lapply(nbiotech.files, readRDS)
 nbiotech.same.peakcaller.merged <- purrr::reduce(nbiotech.ls,merge)
 
 
-frip.ls <- lapply(list(nano-CT,nbiotech.same.peakcaller.merged),function(x){x$peak_ratio_MB})
+frip.ls <- lapply(list(nano_CT,nbiotech.same.peakcaller.merged),function(x){x$peak_ratio_MB})
 names(frip.ls) <- c('nano-scCT','scCT')
 
 frip.ls <- lapply(names(frip.ls),function(x){frip.ls[[x]] <- as.data.frame(frip.ls[[x]]); colnames(frip.ls[[x]]) <- 'frip'; frip.ls[[x]]$method <- x; frip.ls[[x]]})
@@ -116,7 +116,7 @@ df.to.plot$method <- factor(df.to.plot$method,levels = unique(df.to.plot$method)
 
 p1 <- ggplot(data=df.to.plot,aes(x=method,y=frip)) + geom_violin(aes(fill=method)) + theme_bw() + xlab("") + ylab("Fraction of reads in peaks")  + theme(legend.title = element_blank()) + NoLegend()
 p1
-ggsave(filename = paste0(params$out_folder,'/figures/figure_1/frip_nbiotech_nano-CT.pdf'),width=2,height=2)
+ggsave(filename = paste0(params$out_folder,'/figures/figure_1/frip_nbiotech_nano_CT.pdf'),width=2,height=2)
 
 aggregate(x=df.to.plot$frip,by=list(df.to.plot$method),FUN=median)
 ```
@@ -134,7 +134,7 @@ ggsave(plot = p1,paste0(params$out_folder,'/figures/figure_1/UMAP_by_method.pdf'
 
 ```{r}
 markers.all <- FindAllMarkers(object = nbiotech,assay = 'bins_5000',min.pct = 0.05)
-markers.all.2 <- FindAllMarkers(object = nano-CT,assay = 'bins_5000',min.pct = 0.2)
+markers.all.2 <- FindAllMarkers(object = nano_CT,assay = 'bins_5000',min.pct = 0.2)
 
 library(dplyr)
 n=20
@@ -150,16 +150,53 @@ pal <- viridis(10)
 pal
 
 DefaultAssay(nbiotech) <- 'bins_5000'
-p1 <- Seurat::DoHeatmap(object = nbiotech,features = markers.top$gene,slot = 'data')  + scale_fill_viridis_c()
-p2 <- Seurat::DoHeatmap(object = nbiotech,features = markers.top.2$gene,slot = 'data')  + scale_fill_viridis_c()
+p1 <- Seurat::DoHeatmap(object = nbiotech,features = markers.top$gene,slot = 'counts')  + scale_fill_viridis_c()
+p2 <- Seurat::DoHeatmap(object = nbiotech,features = markers.top.2$gene,slot = 'counts')  + scale_fill_viridis_c()
 
-DefaultAssay(nano-CT) <- 'bins_5000'
-p3 <- Seurat::DoHeatmap(object = nano-CT, features = markers.top$gene,slot = 'data')  + scale_fill_viridis_c()
-p4 <- Seurat::DoHeatmap(object = nano-CT, features = markers.top.2$gene,slot = 'data')  + scale_fill_viridis_c()
+DefaultAssay(nano_CT) <- 'bins_5000'
+p3 <- Seurat::DoHeatmap(object = nano_CT, features = markers.top$gene,slot = 'counts')  + scale_fill_viridis_c()
+p4 <- Seurat::DoHeatmap(object = nano_CT, features = markers.top.2$gene,slot = 'counts')  + scale_fill_viridis_c()
 
-ggsave(plot=p1,filename = paste0(params$out_folder,'/figures/figure_1/markers_heatmap_1.pdf'),width=8,height=4)
-ggsave(plot=p4,filename = paste0(params$out_folder,'/figures/figure_1/markers_heatmap_2.pdf'),width=12,height=4)
+
+ggsave(plot=p1,filename = paste0(params$out_folder,'/figures/figure_1/markers_heatmap_viridis_1.pdf'),width=8,height=4)
+ggsave(plot=p4,filename = paste0(params$out_folder,'/figures/figure_1/markers_heatmap_viridis_2.pdf'),width=12,height=4)
 ```
+
+```{r}
+DefaultAssay(nbiotech) <- 'bins_5000'
+p1 <- Seurat::DoHeatmap(object = nbiotech,features = markers.top$gene,slot = 'counts')#  + scale_fill_viridis_c()
+p2 <- Seurat::DoHeatmap(object = nbiotech,features = markers.top.2$gene,slot = 'counts')#  + scale_fill_viridis_c()
+
+DefaultAssay(nano_CT) <- 'bins_5000'
+p3 <- Seurat::DoHeatmap(object = nano_CT, features = markers.top$gene,slot = 'counts')#  + scale_fill_viridis_c()
+p4 <- Seurat::DoHeatmap(object = nano_CT, features = markers.top.2$gene,slot = 'counts')  #+ scale_fill_viridis_c()
+
+ggsave(plot=p1,filename = paste0(params$out_folder,'/figures/figure_1/markers_heatmap_seurat_1.pdf'),width=8,height=4)
+ggsave(plot=p4,filename = paste0(params$out_folder,'/figures/figure_1/markers_heatmap_seurat_2.pdf'),width=12,height=4)
+
+ggsave(plot=p1,filename = paste0(params$out_folder,'/figures/figure_1/markers_heatmap_seurat_1.png'),width=8,height=4)
+ggsave(plot=p4,filename = paste0(params$out_folder,'/figures/figure_1/markers_heatmap_seurat_2.png'),width=12,height=4)
+
+```
+
+```{r}
+col <-
+
+
+DefaultAssay(nbiotech) <- 'bins_5000'
+p1 <- Seurat::DoHeatmap(object = nbiotech,features = markers.top$gene,slot = 'counts') + scale_fill_gradient2(low='blue',mid='white',high='red',midpoint = 3,)#  + scale_fill_viridis_c()
+p2 <- Signac::RegionHeatmap(object = nbiotech,features = markers.top.2$gene,slot = 'counts')#  + scale_fill_viridis_c()
+
+DefaultAssay(nano_CT) <- 'bins_5000'
+p3 <- Signac::RegionHeatmap(object = nano_CT, features = markers.top$gene,slot = 'counts')#  + scale_fill_viridis_c()
+p4 <- Signac::RegionHeatmap(object = nano_CT, features = markers.top.2$gene,slot = 'counts')  #+ scale_fill_viridis_c()
+
+ggsave(plot=p1,filename = paste0(params$out_folder,'/figures/figure_1/markers_heatmap_custom_1.pdf'),width=8,height=4)
+ggsave(plot=p1,filename = paste0(params$out_folder,'/figures/figure_1/markers_heatmap_custom_1.png'),width=8,height=4)
+ggsave(plot=p4,filename = paste0(params$out_folder,'/figures/figure_1/markers_heatmap_custom_2.pdf'),width=12,height=4)
+
+```
+
 
 ```{r extended_figure_2b_markers_dropouts}
 library(dplyr)
@@ -186,8 +223,13 @@ aggregate(df.to.plot$pct.1,by=list(df.to.plot$method),FUN=function(x){median(x)}
 
 
 
-```{r}
+```{r fig.width=10, fig.height=10}
+DefaultAssay(nano_CT) <- 'bins_5000'
+DimHeatmap(nano_CT,reduction = 'lsi',slot = 'data',dims = 2:10)
 
+
+TopFeatures(nano_CT[['lsi']],dim = 2)
+DoHeatmap()
 ```
 
 

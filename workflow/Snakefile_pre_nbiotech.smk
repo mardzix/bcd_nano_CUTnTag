@@ -15,16 +15,16 @@ shell.prefix("source ~/.bash_profile; conda activate " + config['general']['cond
 
 rename_fastq_dic = {"R1": "2", "R2": "3", "R3": "4", "R4": "1"}
 
-rule nbiotech_all2:
+localrules: nbiotech_fastq_dump
+
+rule nbiotech_all:
     input:
-        expand('results/nbiotech_data/cellranger/{sample}/outs/possorted_bam.bam', sample = samples_list_nbiotech),
+        expand('results/nbiotech_data/cellranger/{sample}/outs/possorted_bam.bam', sample= samples_list_nbiotech),
         expand('results/nbiotech_data/{sample}/seurat/bin_{binwidth}/Seurat_object.Rds', sample = samples_list_nbiotech,binwidth=5000),
-        'results/nbiotech_data/merged/bw/nbiotech_merged.bw',
 
         # Seurat direct download
         'results/nbiotech_data/data/seurat/H3K27me3_seurat_object.Rds',
-        'results/nbiotech_data/data/bigwig/H3K27ac_Astrocytes.bw',
-        'results/nbiotech_data/data/fragments/H3K27me3_fragments.tsv.gz',
+        'results/nbiotech_data/data/bigwig/H3K27ac_Astrocytes.bw'
 
 rule nbiotech_fastq_dump:
     output:
@@ -33,8 +33,6 @@ rule nbiotech_fastq_dump:
         "results/nbiotech_data/cellranger/fastq/{sample}/{SRA}_3.fastq",
         "results/nbiotech_data/cellranger/fastq/{sample}/{SRA}_4.fastq",
     threads: 10
-    resources:
-        load = 50
     params:
         tmp = config['general']['tempdir'],
         out = "results/nbiotech_data/cellranger/fastq/{sample}/{SRA}.fastq",
@@ -116,7 +114,7 @@ rule nbiotech_run_macs_broad:
         macs_outdir = 'results/nbiotech_data/{sample}/peaks/macs_broad/'
     shell:
         'macs2 callpeak -t {input} -g mm -f BAMPE -n {wildcards.sample} '
-        '--outdir {params.macs_outdir} --llocal 1000000 --keep-dup=1 --broad-cutoff=0.1 ' 
+        '--outdir {params.macs_outdir} --llocal 100000 --keep-dup=1 --broad-cutoff=0.1 ' 
         '--min-length 1000 --max-gap 1000 --broad 2>&1 '
 
 rule nbiotech_download_chromsizes:
@@ -224,8 +222,7 @@ rule nbiotech_create_seurat_object:
 
 rule download_seurat_objects:
     output:
-        # 'results/nbiotech_data/data/seurat/GSE163532_RAW.tar',
-        'results/nbiotech_data/data/seurat/GSE157637_Seurat_v3_object.tar.gz'
+        'results/nbiotech_data/data/seurat/GSE163532_RAW.tar'
     params:
         url = config['nbiotech_data']['url']['seurat']
     shell:
@@ -241,32 +238,6 @@ rule untar_seurat:
     shell:
         'cd {params.dirname}; '
         'tar -xvzf `basename {input.archive}`'
-
-rule download_fragments:
-    output:
-        fragments_tar = 'results/nbiotech_data/data/fragments/nbiotech_fragments.tar.gz'
-    params:
-        url = config['nbiotech_data']['url']['fragments']
-    shell:
-        'wget -O {output.fragments_tar} {params.url}'
-
-rule untar_fragments:
-    input:
-        'results/nbiotech_data/data/fragments/nbiotech_fragments.tar.gz'
-    output:
-        'results/nbiotech_data/data/fragments/H3K4me3_fragments.tsv.gz',
-        'results/nbiotech_data/data/fragments/H3K27ac_fragments.tsv.gz',
-        'results/nbiotech_data/data/fragments/H3K27me3_fragments.tsv.gz',
-        'results/nbiotech_data/data/fragments/H3K36me3_fragments.tsv.gz',
-        'results/nbiotech_data/data/fragments/Rad21_fragments.tsv.gz',
-        'results/nbiotech_data/data/fragments/Olig2_fragments.tsv.gz',
-    params:
-        dirname = 'results/nbiotech_data/data/fragments/'
-    shell:
-        'cd {params.dirname}; '
-        'tar -xvzf `basename {input}`'
-
-
 
 rule download_bigwigs:
     output:
@@ -316,33 +287,3 @@ rule untar_bigwig:
     shell:
         'cd {params.dirname}; '
         'tar -xvzf `basename {input.bw_tar}`'
-
-rule merge_cellranger_bam_files:
-    input:
-        expand('results/nbiotech_data/cellranger/{sample}/outs/possorted_bam.bam', sample = ['H3K27me3_N1', 'H3K27me3_N2', 'H3K27me3_N3', 'H3K27me3_N4'])
-    output:
-        'results/nbiotech_data/merged/bam/possorted_bam.bam'
-    threads: 32
-    shell:
-        'samtools merge -o {output} -@ {threads} {input}'
-
-
-
-rule index_merged_bam_nbiotech:
-    input:
-        'results/nbiotech_data/merged/bam/possorted_bam.bam'
-    output:
-        'results/nbiotech_data/merged/bam/possorted_bam.bam.bai'
-    shell:
-        'samtools index {input}'
-
-rule nbiotech_merge_bam_to_bw:
-    input:
-        bam   = 'results/nbiotech_data/merged/bam/possorted_bam.bam',
-        index = 'results/nbiotech_data/merged/bam/possorted_bam.bam.bai',
-    output:
-        bw = 'results/nbiotech_data/merged/bw/nbiotech_merged.bw',
-    threads: 16
-    shell:
-        'bamCoverage -b {input.bam} -o {output.bw} -p {threads} --minMappingQuality 5 '
-        ' --binSize 50 --centerReads --smoothLength 250 --normalizeUsing RPKM --ignoreDuplicates --extendReads'

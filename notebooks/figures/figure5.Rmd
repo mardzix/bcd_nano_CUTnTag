@@ -145,6 +145,7 @@ ggsave(plot=p, '/data/proj/GCB_MB/bcd_CT/single-cell/results/figures/figure_5/ps
 ```{r}
 a <- sort(kmeans(x=heatmap.ls[['H3K27me3']][['H3K27me3']],centers = 2)$cluster)
 pheatmap(heatmap.ls[['H3K27me3']][['H3K27me3']][names(a),],cluster_cols = F,cluster_rows = F,show_colnames = F,show_rownames=F,annotation_col = col_annot)
+write.csv(a,'/data/proj/GCB_MB/bcd_CT/single-cell/results/figures/figure_5/H3K27me3_waves.csv') 
 
 pdf(file = '/data/proj/GCB_MB/bcd_CT/single-cell/results/figures/figure_5/pseudotime_H3K27me3_heatmap.pdf',width=6,height=6)
 pheatmap(heatmap.ls[['H3K27me3']][['H3K27me3']][names(a),],cluster_cols = F,cluster_rows = F,show_colnames = F,show_rownames=F,annotation_col = col_annot)

@@ -222,7 +222,7 @@ p1+p3+p4
 ```
 
 
-```{r rename_L3, fig.width=12,fig.height=4}
+```{r rename_short, fig.width=12,fig.height=4}
 idents_short <- c(
   '0' = 'AST_NT',
   '1' = 'AST_TE',
