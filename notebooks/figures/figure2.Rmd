@@ -499,3 +499,54 @@ do.call('grid.arrange', p.ls)
 ```
 
 
+
+```{r LA_Duplicates_stats fig.width =5, fig.height=5}
+LA_reports.files <- Sys.glob('/data/proj/GCB_MB/bcd_CT/single-cell/results2/results/multimodal_data/*/cellranger/*/outs/possorted_bam_duplicates_report.txt')
+LA_reports.ls    <- lapply(LA_reports.files,function(x){x <- read.table(file=x,sep=',',stringsAsFactors=FALSE) })
+LA_reports.ls    <- lapply(LA_reports.ls,function(x){x <- gsub(pattern='\\{', '',x);x <- gsub(pattern='\\}', '',x) })
+
+LA_report.colnames <- unlist(lapply(strsplit(LA_reports.ls[[1]],':'),'[',1))
+LA_report.rownames <- unlist(lapply(strsplit(LA_reports.files,'/'),'[',length(unlist(strsplit(LA_reports.files[[1]],'/')))-2))
+
+
+LA_report.numbers.ls <- lapply(LA_reports.ls,function(x){
+    unlist(lapply(strsplit(x,':'),'[',2))
+    })
+
+
+LA.df <- unname(do.call('rbind.data.frame',LA_report.numbers.ls))
+LA.df <- as.data.frame(apply(LA.df,2,as.numeric))
+LA.df <- LA.df[,-5]
+
+colnames(LA.df) <- LA_report.colnames[-5]
+rownames(LA.df) <- LA_report.rownames
+LA.df$sample    <- LA_report.rownames
+LA.df$exp_name  <- unlist(lapply(strsplit(LA.df$sample,'_'),function(x){paste(x[1:3],collapse='_')}))
+LA.df$modality  <- unlist(lapply(strsplit(LA.df$sample,'_'),'[',4))
+
+LA.df.relative <- as.data.frame(t(apply(LA.df[,1:4],1,function(x){x/sum(x)})))
+LA.df.relative$sample   <- LA.df$sample
+LA.df.relative$exp_name <- LA.df$exp_name
+LA.df.relative$modality <- LA.df$modality
+
+
+
+
+library(ggplot2)
+library(reshape2)
+library(ggthemes)
+library(scales)
+
+LA.df.long     <- reshape2::melt(LA.df,id.vars=c('sample','exp_name','modality'))
+LA.df.rel.long <- reshape2::melt(LA.df.relative,id.vars=c('sample','exp_name','modality'))
+
+p <- ggplot(data=LA.df.rel.long) +
+    geom_bar(aes(x=sample,y=value,fill=variable,group=exp_name),position='stack',stat='identity') +
+    scale_fill_colorblind() +
+    theme_few() + theme(axis.text.x = element_text(angle=45,hjust=1))
+
+ggsave(plot=p,filename='/data/proj/GCB_MB/bcd_CT/single-cell/results/figures/figure_1/LA_duplicates.pdf',width=8,height=8)
+
+```
+
+

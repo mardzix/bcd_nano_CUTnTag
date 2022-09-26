@@ -39,6 +39,9 @@ rule all_single_modality:
         expand('results/multimodal_data/single_modality/{modality}/seurat/{feature}/bam_per_cluster/{ident}/peaks/', modality=antibodies_list,feature='peaks',ident = idents),
         ['results/multimodal_data/{sample}/{modality}_{barcode}/clustering_{feature}/{idents}/bigwig/'.format(sample = sample,antibody = antibody,barcode = barcodes_dict[sample][antibody],modality = antibody,idents = ident,feature = f) for f in ['peaks'] for ident in idents for sample in samples_list  for antibody in barcodes_dict[sample].keys() ],
 
+        # Temp solution
+        LA_report=['results/multimodal_data/{sample}/cellranger/{sample}_{antibody}_{barcode}/outs/possorted_bam_duplicates_report.txt'.format(sample = sample,antibody=antibody,barcode=barcodes_dict[sample][antibody]) for sample in samples_list for antibody in barcodes_dict[sample].keys()],
+
 
 
 rule integrate_with_scRNA:
@@ -221,3 +224,16 @@ rule markers_to_bed:
         nmarkers = 50
     shell:
         'Rscript {input.script} --input {input.csv} --nmarkers {params.nmarkers} --output {output.bed}'
+
+
+rule find_LA_duplicates_in_bam:
+    input:
+        'results/multimodal_data/{sample}/cellranger/{sample}_{antibody}_{barcode}/outs/possorted_bam.bam'
+    output:
+        'results/multimodal_data/{sample}/cellranger/{sample}_{antibody}_{barcode}/outs/possorted_bam_duplicates_report.txt'
+    params:
+        script=workflow_dir + '/scripts/find_LA_duplicates_in_bam_faster.py'
+    shell:
+        'python3 {params.script} {input} > {output}'
+
+

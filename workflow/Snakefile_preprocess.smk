@@ -303,8 +303,7 @@ rule cluster:
     params:
         script = workflow_dir + '/scripts/UMAP_cluster.R',
         plot_group = 'sample'
+    threads: 4
     shell:
         'Rscript {params.script} -i {input.seurat} -o {output.seurat} -a {wildcards.feature} -d 40 -g {params.plot_group} '
-
-
 

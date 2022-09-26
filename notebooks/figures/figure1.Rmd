@@ -180,7 +180,7 @@ ggsave(plot=p4,filename = paste0(params$out_folder,'/figures/figure_1/markers_he
 ```
 
 ```{r}
-col <-
+# col <-
 
 
 DefaultAssay(nbiotech) <- 'bins_5000'
@@ -211,6 +211,7 @@ df.to.plot <- rbind(markers.top,markers.top.2)
 colnames(df.to.plot)
 
 p <- ggplot(data=df.to.plot,aes(x=method,y=  pct.1)) + geom_boxplot(aes(fill=method),outlier.shape=NA) + theme_bw() + coord_cartesian(ylim=c(0,0.5)) + ylab("Percentage of cells with signal") + xlab("") + NoLegend()
+# p <- ggplot(data=df.to.plot,aes(x=method,y=  pct.1)) + geom_jitter(aes(fill=method),outlier.shape=NA) + theme_bw() + coord_cartesian(ylim=c(0,0.5)) + ylab("Percentage of cells with signal") + xlab("") + NoLegend()
 # ggplot(data=df.to.plot,aes(x=method,y=  pct.2)) + geom_boxplot(aes(fill=method),outlier.shape=NA) + theme_bw() + coord_cartesian(ylim=c(0,0.5)) + ylab("Percentage of cells with signal") + xlab("")
 p
 ggsave(plot=p,filename=paste0(params$out_folder,'/figures/figure_1/markers_dropout_percentage.pdf'),width=2,height=2) 
@@ -231,10 +232,6 @@ DimHeatmap(nano_CT,reduction = 'lsi',slot = 'data',dims = 2:10)
 TopFeatures(nano_CT[['lsi']],dim = 2)
 DoHeatmap()
 ```
-
-
-
-
 
 
 
