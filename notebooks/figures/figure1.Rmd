@@ -223,6 +223,30 @@ aggregate(df.to.plot$pct.1,by=list(df.to.plot$method),FUN=function(x){median(x)}
 ```
 
 
+```{r}
+library(dplyr)
+markers.all   <- FindAllMarkers(object = nbiotech, assay = 'bins_5000', min.pct=0.05)
+markers.all.2 <- FindAllMarkers(object = nano_CT, assay = 'bins_5000', min.pct=0.05)
+
+markers.all$method   <- 'scCT'
+markers.all.2$method <- 'nanoCT'
+
+
+n=50
+markers.top <- markers.all %>% group_by(cluster) %>% top_n(n = n,wt = -p_val_adj)
+markers.top.2 <- markers.all.2 %>% group_by(cluster) %>% top_n(n = n,wt = -p_val_adj)
+
+markers.combined <- as.data.frame(rbind(markers.top, markers.top.2))
+
+p1 <- ggplot(data = markers.combined, aes(x = method, y= -log(p_val_adj))) + geom_violin(aes(fill=method)) + geom_dotplot(binaxis='y',stackdir='center',dotsize=0.2) + theme_bw()
+# geom_jitter(width=1,height=0)
+ggsave(plot = p1, filename = paste0(params$out_folder,'/figures/figure_1/markers_violin2.pdf'),width=6,height=6)
+
+p2 <- ggplot(data = markers.combined, aes(x = avg_log2FC, y = -log10(p_val_adj),color=method)) + geom_point(size=0.5) + theme_bw()
+ggsave(plot = p2, filename = paste0(params$out_folder,'/figures/figure_1/markers_volcano2.pdf'),width=6,height=6)
+
+```
+
 
 ```{r fig.width=10, fig.height=10}
 DefaultAssay(nano_CT) <- 'bins_5000'
@@ -232,7 +256,6 @@ DimHeatmap(nano_CT,reduction = 'lsi',slot = 'data',dims = 2:10)
 TopFeatures(nano_CT[['lsi']],dim = 2)
 DoHeatmap()
 ```
-
 
 
 
