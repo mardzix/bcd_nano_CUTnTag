@@ -245,6 +245,8 @@ ggsave(plot = p1, filename = paste0(params$out_folder,'/figures/figure_1/markers
 p2 <- ggplot(data = markers.combined, aes(x = avg_log2FC, y = -log10(p_val_adj),color=method)) + geom_point(size=0.5) + theme_bw()
 ggsave(plot = p2, filename = paste0(params$out_folder,'/figures/figure_1/markers_volcano2.pdf'),width=6,height=6)
 
+wilcox.test(markers.top$p_val_adj, markers.top.2$p_val_adj)$p.value
+# 1.265921e-34
 ```
 
 
