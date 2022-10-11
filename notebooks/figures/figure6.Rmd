@@ -7,6 +7,10 @@ output: html_notebook
 library(clusterProfiler)
 library(org.Mm.eg.db)
 library(Seurat)
+library(ggplot2)
+library(reshape2)
+library(dplyr)
+
 ```
 
 ```{r,fig.width=5,fig.height=8}
@@ -65,9 +69,6 @@ View(ego2@result)
 
 
 ```{r}
-library(ggplot2)
-library(reshape2)
-library(dplyr)
 
 scRNA <- readRDS(file='/data/proj/GCB_MB/single-cell-CUT-Tag/nbiotech_paper/analysis/results/Sten_RNA/clustering/01.clustering_20000cells.Rds')
 scRNA <- readRDS(file='/data/proj/GCB_MB/single-cell-CUT-Tag/nbiotech_paper/analysis/results/marques_RNA/clustering/01.clustering.Rds')
@@ -127,8 +128,8 @@ library(pheatmap)
 library(RColorBrewer)
 
 gene_list <- read.csv(file='/data/proj/GCB_MB/bcd_CT/single-cell/results/multiple_modalities/ATAC_H3K27ac_H3K27me3/seurat_multimodal/peaks/scvelo/ATAC_H3K27ac/top_genes.csv',stringsAsFactors = F,row.names = NULL,header = FALSE)
-
 gene_list <- as.character(gene_list)
+gene_list <- head(gene_list,101)
 
 m <- GetAssayData(scRNA,slot = 'data',assay = 'RNA')
 
@@ -157,10 +158,11 @@ cluster_colors <- list('cluster'=cluster_colors)
 names(cluster_colors[['cluster']]) <- levels(ann_col$cluster)
 
 
-png('/data/proj/GCB_MB/bcd_CT/single-cell/results/figures/figure_6/scRNA_Expression_heatmap_scVelo_genes.png', width=1000,height=1000)
+# png('/data/proj/GCB_MB/bcd_CT/single-cell/results/figures/figure_6/scRNA_Expression_heatmap_scVelo_genes.png', width=1000,height=1000)
+pdf('/data/proj/GCB_MB/bcd_CT/single-cell/results/figures/figure_6/scRNA_Expression_heatmap_scVelo_genes.pdf', width=10,height=10)
 pheatmap(scVelo.matrix[,names(sort(scRNA$pt))],
          cluster_cols = FALSE,
-         treeheight_row = 0,show_colnames = FALSE,annotation_col = ann_col,
+         treeheight_row = 0,show_colnames = FALSE,annotation_col = ann_col, show_rownames = TRUE,
          annotation_colors = cluster_colors)
 dev.off()
 ```

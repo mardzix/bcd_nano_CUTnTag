@@ -106,12 +106,12 @@ ggsave(filename = paste0(params$out_prefix,'/figures/figure_2/UMAP_with_connecti
 seurat <- readRDS(file = paste0(params$out_prefix,'/multiple_modalities/ATAC_H3K27ac_H3K27me3/seurat_multimodal/peaks/Seurat_object.Rds'))
 
 p.ls <- lapply(names(seurat[1:3]),function(x){
-  DimPlot(seurat[[x]],group.by='idents_short',label=TRUE,repel=TRUE) + NoLegend() + ggtitle(x)  
+  DimPlot(seurat[[x]],group.by='idents_short',label=TRUE,repel=TRUE,raster=TRUE) + NoLegend() + ggtitle(x)
 })
 names(p.ls) <- names(seurat[1:3])
 
 lapply(names(seurat[1:3]),function(x){
-  ggsave(plot = p.ls[[x]],filename = paste0(params$out_prefix,'/figures/figure_2/UMAP_',x,'_signle.png'),width=6,height=6)
+  ggsave(plot = p.ls[[x]],filename = paste0(params$out_prefix,'/figures/figure_2/UMAP_',x,'_signle.pdf'),width=6,height=6)
 })
 
 ```

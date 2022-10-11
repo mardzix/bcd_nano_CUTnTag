@@ -284,22 +284,22 @@ dev.off()
 
 ```{r,fig.width=2,fig.height=2}
 region <- 'chr7-30888483-30951788'
-tile_plot1 <- TilePlot(object = seurat.ls[['ATAC']],region=region,idents = idents,group.by = 'wnn_ident_short',tile.size = width(StringToGRanges(region))/50,tile.cells = 100,order.by = 'random')
-tile_plot1 + scale_fill_gradient(low = 'white',high = 'black',guide = 'legend')
-
+tile_plot1 <- TilePlot(object = seurat.ls[['ATAC']],region=region,idents = idents,group.by = 'wnn_ident_short',tile.size = width(StringToGRanges(region))/50,tile.cells = 100,order.by = 'random') +
+  scale_fill_gradient(low = 'white',high = 'black',guide = 'legend')
+ggsave(plot=tile_plot1,paste0(params$out_prefix,'/figures/figure_2/genome_browser_tile_Mag_ATAC.pdf'),width=6,height=6)
 ```
 
 
 ```{r,fig.width=2,fig.height=2}
 region <- 'chr7-30888483-30951788'
-tile_plot1 <- TilePlot(object = seurat.ls[['H3K27ac']],region=region,idents = idents,group.by = 'wnn_ident_short',tile.size = width(StringToGRanges(region))/50,tile.cells = 100,order.by = 'random')
-tile_plot1 + scale_fill_gradient(low = 'white',high = 'black',guide = 'legend')
+tile_plot2 <- TilePlot(object = seurat.ls[['H3K27ac']],region=region,idents = idents,group.by = 'wnn_ident_short',tile.size = width(StringToGRanges(region))/50,tile.cells = 100,order.by = 'random') + scale_fill_gradient(low = 'white',high = 'black',guide = 'legend')
+ggsave(plot=tile_plot2, paste0(params$out_prefix,'/figures/figure_2/genome_browser_tile_Mag_H3K27ac.pdf'),width=6,height=6)
 ```
 
 ```{r,fig.width=2,fig.height=2}
 region <- 'chr7-30714321-30816989'
-tile_plot1 <- TilePlot(object = seurat.ls[['H3K27me3']],region=region,idents = idents,group.by = 'wnn_ident_short',tile.size = width(StringToGRanges(region))/50,tile.cells = 100,order.by = 'random')
-tile_plot1 + scale_fill_gradient(low = 'white',high = 'black',guide = 'legend')
+tile_plot3 <- TilePlot(object = seurat.ls[['H3K27me3']],region=region,idents = idents,group.by = 'wnn_ident_short',tile.size = width(StringToGRanges(region))/50,tile.cells = 100,order.by = 'random') + scale_fill_gradient(low = 'white',high = 'black',guide = 'legend')
+ggsave(plot=tile_plot3, paste0(params$out_prefix,'/figures/figure_2/genome_browser_tile_Mag_H3K27.me3.pdf'),width=6,height=6)
 ```
 
 ```{r Foxg1 plot,fig.width=4,fig.height=7}
