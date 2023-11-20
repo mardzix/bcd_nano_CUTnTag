@@ -1,11 +1,26 @@
 # Multimodal chromatin profiling using nanobody-based single-cell CUT&Tag
 ### Marek Bartosovic, Goncalo Castelo-Branco
 # 
-Code repository related to preprint.
+
+
+Code repository related to publication
+
+Bartosovic, M., Castelo-Branco, G. Multimodal chromatin profiling using nanobody-based single-cell CUT&Tag. Nat Biotechnol 41, 794–805 (2023). https://doi.org/10.1038/s41587-022-01535-4
+
+
+and preprint 
+
 
 Multimodal chromatin profiling using nanobody-based single-cell CUT&Tag
 Marek Bartosovic, Gonçalo Castelo-Branco
 bioRxiv 2022.03.08.483459; doi: https://doi.org/10.1101/2022.03.08.483459
+
+
+# Pipeline 
+
+Standalone pipeline to analyse single-cell nano-CT data is available at:
+https://github.com/bartosovic-lab/nanoscope
+ 
 
 # Data availability
 Processed files - Seurat objects, fragments file (cellranger), bigwig tracks per cluster and .h5 matrices are available as supplementary files in the GEO repository
